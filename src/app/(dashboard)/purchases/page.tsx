@@ -108,7 +108,10 @@ export default function PurchasesPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg border border-slate-200">
+        <div
+          className="bg-white p-6 rounded-lg border border-slate-200 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => router.push("/inventory")}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600">إجمالي الكميات</p>
@@ -169,9 +172,9 @@ export default function PurchasesPage() {
               <p className="text-2xl font-bold text-emerald-600 mt-1">
                 {purchases
                   .reduce((sum, p) => {
-                    // Convert both prices to EGP first, then calculate profit
-                    const purchasePriceInEGP = p.purchasePrice * p.quantity * exchangeRates[p.currency];
-                    const sellingPriceInEGP = p.sellingPrice * p.quantity * exchangeRates[p.currency];
+                    // Convert prices to EGP (prices are already total)
+                    const purchasePriceInEGP = p.purchasePrice * exchangeRates[p.currency];
+                    const sellingPriceInEGP = p.sellingPrice * exchangeRates[p.currency];
                     const profit = sellingPriceInEGP - purchasePriceInEGP;
                     return sum + profit;
                   }, 0)

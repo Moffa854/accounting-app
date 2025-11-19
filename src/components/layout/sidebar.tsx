@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+
+interface SidebarSubItem {
+  title: string;
+  href: string;
+}
 
 interface SidebarItem {
   title: string;
   href: string;
   icon: React.ReactNode;
+  subItems?: SidebarSubItem[];
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -86,6 +93,10 @@ const sidebarItems: SidebarItem[] = [
         />
       </svg>
     ),
+    subItems: [
+      { title: "تقارير الموردين", href: "/reports/suppliers" },
+      { title: "تقارير العملاء", href: "/reports/customers" },
+    ],
   },
   {
     title: "الإعدادات",
@@ -116,27 +127,95 @@ const sidebarItems: SidebarItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [expandedItem, setExpandedItem] = useState<string | null>(
+    // Auto-expand if on a reports page
+    pathname.startsWith("/reports") ? "/reports" : null
+  );
+
+  const toggleExpand = (href: string) => {
+    setExpandedItem(expandedItem === href ? null : href);
+  };
 
   return (
     <aside className="w-64 bg-white border-l border-slate-200 h-[calc(100vh-64px)] sticky top-[64px]">
       <nav className="p-4 space-y-2">
         {sidebarItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = pathname === item.href;
+          const isExpanded = expandedItem === item.href;
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isSubItemActive = hasSubItems && item.subItems?.some(sub => pathname.startsWith(sub.href));
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                isActive
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
+            <div key={item.href}>
+              {hasSubItems ? (
+                <>
+                  <button
+                    onClick={() => toggleExpand(item.href)}
+                    className={cn(
+                      "w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors",
+                      isActive || isSubItemActive
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.icon}
+                      <span className="font-medium">{item.title}</span>
+                    </div>
+                    <svg
+                      className={cn(
+                        "w-4 h-4 transition-transform",
+                        isExpanded ? "rotate-180" : ""
+                      )}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                  {isExpanded && (
+                    <div className="mt-1 mr-4 space-y-1">
+                      {item.subItems?.map((subItem) => {
+                        const isSubActive = pathname.startsWith(subItem.href);
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className={cn(
+                              "block px-4 py-2 rounded-lg text-sm transition-colors",
+                              isSubActive
+                                ? "bg-slate-100 text-slate-900 font-medium"
+                                : "text-slate-600 hover:bg-slate-50"
+                            )}
+                          >
+                            {subItem.title}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  {item.icon}
+                  <span className="font-medium">{item.title}</span>
+                </Link>
               )}
-            >
-              {item.icon}
-              <span className="font-medium">{item.title}</span>
-            </Link>
+            </div>
           );
         })}
       </nav>

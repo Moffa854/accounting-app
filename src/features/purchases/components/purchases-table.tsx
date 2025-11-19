@@ -64,7 +64,7 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
 
   return (
     <>
-      <div className="bg-white rounded-lg border border-slate-200">
+      <div className="bg-white rounded-lg border border-slate-200" dir="rtl">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 border-b-2 border-slate-200">
@@ -72,23 +72,23 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
                 <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
                   #
                 </th>
-                <th className="text-left px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                  Product Name
+                <th className="text-right px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  اسم المنتج
                 </th>
                 <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden sm:table-cell">
-                  Quantity
+                  الكمية
                 </th>
                 <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                  Purchase Price
+                  سعر الشراء
                 </th>
                 <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden lg:table-cell">
-                  Selling Price
+                  سعر البيع
                 </th>
                 <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
-                  Purchase Date
+                  تاريخ الشراء
                 </th>
                 <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                  Actions
+                  الإجراءات
                 </th>
               </tr>
             </thead>
@@ -98,7 +98,7 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
                   <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm font-medium text-slate-900">
                     {index + 1}
                   </td>
-                  <td className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm text-slate-900 max-w-[150px] truncate" title={purchase.productName}>
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-right text-xs md:text-sm text-slate-900 max-w-[150px] truncate" title={purchase.productName}>
                     {purchase.productName}
                   </td>
                   <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm text-slate-900 hidden sm:table-cell">

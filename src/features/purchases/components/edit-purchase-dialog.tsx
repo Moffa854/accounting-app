@@ -36,8 +36,12 @@ export function EditPurchaseDialog({
   const [formData, setFormData] = useState({
     productName: purchase.productName,
     quantity: purchase.quantity,
+    unitPurchasePrice: purchase.unitPurchasePrice,
     purchasePrice: purchase.purchasePrice,
+    unitSellingPrice: purchase.unitSellingPrice,
     sellingPrice: purchase.sellingPrice,
+    supplierName: purchase.supplierName,
+    supplierPhone: purchase.supplierPhone,
     currency: purchase.currency,
   });
 
@@ -45,8 +49,12 @@ export function EditPurchaseDialog({
     setFormData({
       productName: purchase.productName,
       quantity: purchase.quantity,
+      unitPurchasePrice: purchase.unitPurchasePrice,
       purchasePrice: purchase.purchasePrice,
+      unitSellingPrice: purchase.unitSellingPrice,
       sellingPrice: purchase.sellingPrice,
+      supplierName: purchase.supplierName,
+      supplierPhone: purchase.supplierPhone,
       currency: purchase.currency,
     });
   }, [purchase]);
@@ -85,6 +93,35 @@ export function EditPurchaseDialog({
             />
           </div>
 
+          {/* Supplier Name */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-supplierName">اسم المورد</Label>
+            <Input
+              id="edit-supplierName"
+              value={formData.supplierName}
+              onChange={(e) =>
+                setFormData({ ...formData, supplierName: e.target.value })
+              }
+              disabled={isLoading}
+              required
+            />
+          </div>
+
+          {/* Supplier Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-supplierPhone">رقم هاتف المورد</Label>
+            <Input
+              id="edit-supplierPhone"
+              type="tel"
+              value={formData.supplierPhone}
+              onChange={(e) =>
+                setFormData({ ...formData, supplierPhone: e.target.value })
+              }
+              disabled={isLoading}
+              required
+            />
+          </div>
+
           {/* Quantity */}
           <div className="space-y-2">
             <Label htmlFor="edit-quantity">الكمية</Label>
@@ -93,9 +130,15 @@ export function EditPurchaseDialog({
               type="number"
               min="1"
               value={formData.quantity}
-              onChange={(e) =>
-                setFormData({ ...formData, quantity: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const quantity = Number(e.target.value);
+                setFormData({
+                  ...formData,
+                  quantity,
+                  purchasePrice: formData.unitPurchasePrice * quantity,
+                  sellingPrice: formData.unitSellingPrice * quantity,
+                });
+              }}
               disabled={isLoading}
               required
             />
@@ -124,43 +167,73 @@ export function EditPurchaseDialog({
             </Select>
           </div>
 
-          {/* Purchase Price */}
+          {/* Unit Purchase Price */}
           <div className="space-y-2">
-            <Label htmlFor="edit-purchasePrice">سعر الشراء</Label>
+            <Label htmlFor="edit-unitPurchasePrice">سعر شراء الوحدة</Label>
             <Input
-              id="edit-purchasePrice"
+              id="edit-unitPurchasePrice"
               type="number"
               min="0"
               step="0.01"
-              value={formData.purchasePrice}
-              onChange={(e) =>
+              value={formData.unitPurchasePrice}
+              onChange={(e) => {
+                const unitPrice = Number(e.target.value);
                 setFormData({
                   ...formData,
-                  purchasePrice: Number(e.target.value),
-                })
-              }
+                  unitPurchasePrice: unitPrice,
+                  purchasePrice: unitPrice * formData.quantity,
+                });
+              }}
               disabled={isLoading}
               required
             />
           </div>
 
-          {/* Selling Price */}
+          {/* Total Purchase Price */}
           <div className="space-y-2">
-            <Label htmlFor="edit-sellingPrice">سعر البيع</Label>
+            <Label htmlFor="edit-purchasePrice">السعر الإجمالي للشراء</Label>
             <Input
-              id="edit-sellingPrice"
+              id="edit-purchasePrice"
+              type="number"
+              step="0.01"
+              value={formData.purchasePrice}
+              disabled
+              className="bg-slate-50"
+            />
+          </div>
+
+          {/* Unit Selling Price */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-unitSellingPrice">سعر بيع الوحدة</Label>
+            <Input
+              id="edit-unitSellingPrice"
               type="number"
               min="0"
               step="0.01"
-              value={formData.sellingPrice}
-              onChange={(e) =>
+              value={formData.unitSellingPrice}
+              onChange={(e) => {
+                const unitPrice = Number(e.target.value);
                 setFormData({
                   ...formData,
-                  sellingPrice: Number(e.target.value),
-                })
-              }
+                  unitSellingPrice: unitPrice,
+                  sellingPrice: unitPrice * formData.quantity,
+                });
+              }}
               disabled={isLoading}
               required
+            />
+          </div>
+
+          {/* Total Selling Price */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-sellingPrice">السعر الإجمالي للبيع</Label>
+            <Input
+              id="edit-sellingPrice"
+              type="number"
+              step="0.01"
+              value={formData.sellingPrice}
+              disabled
+              className="bg-slate-50"
             />
           </div>
 

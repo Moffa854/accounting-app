@@ -54,6 +54,8 @@ export const purchasesService = {
         return {
           id: doc.id,
           ...data,
+          // Handle old purchases that don't have unitPurchasePrice
+          unitPurchasePrice: data.unitPurchasePrice || (data.purchasePrice / data.quantity) || 0,
           createdAt: data.createdAt.toDate(),
           updatedAt: data.updatedAt.toDate(),
         } as Purchase;

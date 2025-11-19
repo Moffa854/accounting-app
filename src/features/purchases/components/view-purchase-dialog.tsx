@@ -28,19 +28,35 @@ export function ViewPurchaseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-900">
             تفاصيل السلعة
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           {/* Product Name */}
           <div className="bg-slate-50 p-4 rounded-lg">
             <p className="text-sm text-slate-600 mb-1">اسم المنتج</p>
             <p className="text-lg font-semibold text-slate-900">
               {purchase.productName}
+            </p>
+          </div>
+
+          {/* Supplier Name */}
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <p className="text-sm text-slate-600 mb-1">اسم المورد</p>
+            <p className="text-lg font-semibold text-slate-900">
+              {purchase.supplierName}
+            </p>
+          </div>
+
+          {/* Supplier Phone */}
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <p className="text-sm text-slate-600 mb-1">رقم هاتف المورد</p>
+            <p className="text-lg font-semibold text-slate-900 direction-ltr">
+              {purchase.supplierPhone}
             </p>
           </div>
 
@@ -52,28 +68,35 @@ export function ViewPurchaseDialog({
             </p>
           </div>
 
-          {/* Purchase Price */}
+          {/* Unit Purchase Price */}
           <div className="bg-slate-50 p-4 rounded-lg">
-            <p className="text-sm text-slate-600 mb-1">سعر الشراء</p>
+            <p className="text-sm text-slate-600 mb-1">سعر شراء الوحدة</p>
+            <p className="text-lg font-semibold text-slate-900">
+              {purchase.unitPurchasePrice.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
+            </p>
+          </div>
+
+          {/* Total Purchase Price */}
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <p className="text-sm text-slate-600 mb-1">السعر الإجمالي للشراء</p>
             <p className="text-lg font-semibold text-slate-900">
               {purchase.purchasePrice.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
             </p>
           </div>
 
-          {/* Selling Price */}
+          {/* Unit Selling Price */}
           <div className="bg-slate-50 p-4 rounded-lg">
-            <p className="text-sm text-slate-600 mb-1">سعر البيع</p>
+            <p className="text-sm text-slate-600 mb-1">سعر بيع الوحدة</p>
             <p className="text-lg font-semibold text-slate-900">
-              {purchase.sellingPrice.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
+              {purchase.unitSellingPrice.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
             </p>
           </div>
 
-          {/* Profit */}
-          <div className={`p-4 rounded-lg ${profit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-            <p className="text-sm text-slate-600 mb-1">الربح المتوقع</p>
-            <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {profit.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
-              <span className="text-sm mr-2">({profitMargin}%)</span>
+          {/* Total Selling Price */}
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <p className="text-sm text-slate-600 mb-1">السعر الإجمالي للبيع</p>
+            <p className="text-lg font-semibold text-slate-900">
+              {purchase.sellingPrice.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
             </p>
           </div>
 
@@ -108,6 +131,15 @@ export function ViewPurchaseDialog({
               </p>
             </div>
           )}
+
+          {/* Profit - Full Width */}
+          <div className={`md:col-span-2 p-4 rounded-lg ${profit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+            <p className="text-sm text-slate-600 mb-1">الربح المتوقع</p>
+            <p className={`text-lg font-semibold ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+              {profit.toFixed(2)} {CURRENCY_SYMBOLS[purchase.currency]}
+              <span className="text-sm mr-2">({profitMargin}%)</span>
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

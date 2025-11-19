@@ -31,8 +31,12 @@ export default function AddPurchasePage() {
   const [formData, setFormData] = useState({
     productName: "",
     quantity: 1,
+    unitPurchasePrice: 0,
     purchasePrice: 0,
+    unitSellingPrice: 0,
     sellingPrice: 0,
+    supplierName: "",
+    supplierPhone: "",
     currency: "EGP" as Currency,
   });
 
@@ -53,12 +57,22 @@ export default function AddPurchasePage() {
       return;
     }
 
+    if (!formData.supplierName.trim()) {
+      setError("يرجى إدخال اسم المورد");
+      return;
+    }
+
+    if (!formData.supplierPhone.trim()) {
+      setError("يرجى إدخال رقم هاتف المورد");
+      return;
+    }
+
     if (formData.quantity < 1) {
       setError("الكمية يجب أن تكون 1 على الأقل");
       return;
     }
 
-    if (formData.purchasePrice <= 0 || formData.sellingPrice <= 0) {
+    if (formData.unitPurchasePrice <= 0 || formData.unitSellingPrice <= 0) {
       setError("الأسعار يجب أن تكون أكبر من صفر");
       return;
     }
@@ -129,6 +143,41 @@ export default function AddPurchasePage() {
               />
             </div>
 
+            {/* Supplier Name */}
+            <div className="space-y-2">
+              <Label htmlFor="supplierName">
+                اسم المورد <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="supplierName"
+                placeholder="مثال: شركة الإلكترونيات"
+                value={formData.supplierName}
+                onChange={(e) =>
+                  setFormData({ ...formData, supplierName: e.target.value })
+                }
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            {/* Supplier Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="supplierPhone">
+                رقم هاتف المورد <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="supplierPhone"
+                type="tel"
+                placeholder="مثال: 01012345678"
+                value={formData.supplierPhone}
+                onChange={(e) =>
+                  setFormData({ ...formData, supplierPhone: e.target.value })
+                }
+                disabled={isLoading}
+                required
+              />
+            </div>
+
             {/* Quantity */}
             <div className="space-y-2">
               <Label htmlFor="quantity">
@@ -140,9 +189,16 @@ export default function AddPurchasePage() {
                 min="1"
                 placeholder="1"
                 value={formData.quantity}
-                onChange={(e) =>
-                  setFormData({ ...formData, quantity: Number(e.target.value) })
-                }
+                onChange={(e) => {
+                  const quantity = Number(e.target.value);
+                  setFormData({
+                    ...formData,
+                    quantity,
+                    // Auto-calculate total prices based on unit prices
+                    purchasePrice: formData.unitPurchasePrice * quantity,
+                    sellingPrice: formData.unitSellingPrice * quantity,
+                  });
+                }}
                 disabled={isLoading}
                 required
               />
@@ -173,55 +229,97 @@ export default function AddPurchasePage() {
               </Select>
             </div>
 
-            {/* Purchase Price */}
+            {/* Unit Purchase Price */}
+            <div className="space-y-2">
+              <Label htmlFor="unitPurchasePrice">
+                سعر شراء الوحدة الواحدة <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="unitPurchasePrice"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.unitPurchasePrice || ""}
+                onChange={(e) => {
+                  const unitPrice = Number(e.target.value);
+                  setFormData({
+                    ...formData,
+                    unitPurchasePrice: unitPrice,
+                    purchasePrice: unitPrice * formData.quantity,
+                  });
+                }}
+                disabled={isLoading}
+                required
+              />
+              <p className="text-sm text-slate-500">
+                سعر شراء المنتج الواحد من المورد
+              </p>
+            </div>
+
+            {/* Total Purchase Price */}
             <div className="space-y-2">
               <Label htmlFor="purchasePrice">
-                السعر الكلي للشراء <span className="text-red-500">*</span>
+                السعر الإجمالي للشراء
               </Label>
               <Input
                 id="purchasePrice"
                 type="number"
-                min="0"
                 step="0.01"
                 placeholder="0.00"
                 value={formData.purchasePrice || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    purchasePrice: Number(e.target.value),
-                  })
-                }
-                disabled={isLoading}
-                required
+                disabled
+                className="bg-slate-50"
               />
               <p className="text-sm text-slate-500">
-                السعر الإجمالي الذي تم دفعه لشراء السلعة
+                يتم الحساب تلقائياً: سعر شراء الوحدة × الكمية
               </p>
             </div>
 
-            {/* Selling Price */}
+            {/* Unit Selling Price */}
             <div className="space-y-2">
-              <Label htmlFor="sellingPrice">
-                السعر الخاص بالبيع <span className="text-red-500">*</span>
+              <Label htmlFor="unitSellingPrice">
+                سعر بيع الوحدة الواحدة <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="sellingPrice"
+                id="unitSellingPrice"
                 type="number"
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                value={formData.sellingPrice || ""}
-                onChange={(e) =>
+                value={formData.unitSellingPrice || ""}
+                onChange={(e) => {
+                  const unitPrice = Number(e.target.value);
                   setFormData({
                     ...formData,
-                    sellingPrice: Number(e.target.value),
-                  })
-                }
+                    unitSellingPrice: unitPrice,
+                    sellingPrice: unitPrice * formData.quantity,
+                  });
+                }}
                 disabled={isLoading}
                 required
               />
               <p className="text-sm text-slate-500">
-                السعر الذي تريد بيع السلعة به
+                سعر بيع المنتج الواحد
+              </p>
+            </div>
+
+            {/* Total Selling Price */}
+            <div className="space-y-2">
+              <Label htmlFor="sellingPrice">
+                السعر الإجمالي للبيع
+              </Label>
+              <Input
+                id="sellingPrice"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.sellingPrice || ""}
+                disabled
+                className="bg-slate-50"
+              />
+              <p className="text-sm text-slate-500">
+                يتم الحساب تلقائياً: سعر الوحدة × الكمية
               </p>
             </div>
 

@@ -1,6 +1,7 @@
 // Firebase Configuration
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAnalytics, type Analytics } from "firebase/analytics";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDx67F35SmSMgzP4zLnGWOe3EjDVic0v30",
@@ -36,5 +37,14 @@ function getFirebaseAnalytics(): Analytics | null {
   }
 }
 
+function getFirebaseFirestore(): Firestore {
+  if (typeof window === "undefined") {
+    throw new Error("Firestore can only be initialized on the client side");
+  }
+
+  return getFirestore(getFirebaseApp());
+}
+
 export const app = typeof window !== "undefined" ? getFirebaseApp() : ({} as FirebaseApp);
 export const analytics = typeof window !== "undefined" ? getFirebaseAnalytics() : null;
+export const db = typeof window !== "undefined" ? getFirebaseFirestore() : ({} as Firestore);

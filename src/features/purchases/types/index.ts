@@ -6,8 +6,12 @@ export interface Purchase {
   id: string;
   productName: string;
   quantity: number;
-  purchasePrice: number;
-  sellingPrice: number;
+  unitPurchasePrice: number; // Price per unit (purchase)
+  purchasePrice: number; // Total purchase price (unitPurchasePrice × quantity)
+  unitSellingPrice: number; // Price per unit (selling)
+  sellingPrice: number; // Total selling price (unitSellingPrice × quantity)
+  supplierName: string;
+  supplierPhone: string;
   currency: Currency;
   createdAt: Date;
   updatedAt: Date;
@@ -17,8 +21,12 @@ export interface Purchase {
 export interface PurchaseFormData {
   productName: string;
   quantity: number;
-  purchasePrice: number;
-  sellingPrice: number;
+  unitPurchasePrice: number; // Price per unit (purchase)
+  purchasePrice: number; // Total purchase price (unitPurchasePrice × quantity)
+  unitSellingPrice: number; // Price per unit (selling)
+  sellingPrice: number; // Total selling price (unitSellingPrice × quantity)
+  supplierName: string;
+  supplierPhone: string;
   currency: Currency;
 }
 
