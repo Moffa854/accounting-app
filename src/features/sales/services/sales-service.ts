@@ -12,10 +12,11 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
-import { Sale, SaleFormData, Customer } from "../types";
+import { Sale, SaleFormData, Customer, CustomerReceipt } from "../types";
 
 const SALES_COLLECTION = "sales";
 const CUSTOMERS_COLLECTION = "customers";
+const RECEIPTS_COLLECTION = "customer_receipts";
 
 // ============= Sales Operations =============
 
@@ -247,6 +248,157 @@ export const customersService = {
     } catch (error) {
       console.error("Error deleting customer:", error);
       throw new Error("فشل في حذف العميل");
+    }
+  },
+};
+
+// ============= Customer Receipts Operations =============
+
+export const receiptsService = {
+  /**
+   * Generate unique receipt number
+   */
+  async generateReceiptNumber(userId: string): Promise<string> {
+    try {
+      const q = query(
+        collection(db, RECEIPTS_COLLECTION),
+        where("userId", "==", userId),
+        orderBy("createdAt", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+      const lastReceipt = querySnapshot.docs[0];
+
+      if (!lastReceipt) {
+        return "REC-001";
+      }
+
+      const lastNumber = lastReceipt.data().receiptNumber;
+      const numberPart = parseInt(lastNumber.split("-")[1]) + 1;
+      return `REC-${numberPart.toString().padStart(3, "0")}`;
+    } catch (error) {
+      console.error("Error generating receipt number:", error);
+      return `REC-${Date.now()}`;
+    }
+  },
+
+  /**
+   * Create a new customer receipt
+   */
+  async createReceipt(
+    receiptData: Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">
+  ): Promise<string> {
+    try {
+      const now = Timestamp.now();
+
+      const docData = {
+        ...receiptData,
+        receiptDate: Timestamp.fromDate(receiptData.receiptDate),
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const docRef = await addDoc(collection(db, RECEIPTS_COLLECTION), docData);
+      return docRef.id;
+    } catch (error) {
+      console.error("Error creating receipt:", error);
+      throw new Error("فشل في إنشاء إيصال الاستلام");
+    }
+  },
+
+  /**
+   * Fetch all receipts for a specific customer
+   */
+  async fetchCustomerReceipts(customerId: string): Promise<CustomerReceipt[]> {
+    try {
+      const q = query(
+        collection(db, RECEIPTS_COLLECTION),
+        where("customerId", "==", customerId),
+        orderBy("receiptDate", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      return querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          receiptDate: data.receiptDate?.toDate() || new Date(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+        } as CustomerReceipt;
+      });
+    } catch (error) {
+      console.error("Error fetching customer receipts:", error);
+      throw new Error("فشل في جلب إيصالات العميل");
+    }
+  },
+
+  /**
+   * Fetch all receipts for a specific user
+   */
+  async fetchAllReceipts(userId: string): Promise<CustomerReceipt[]> {
+    try {
+      const q = query(
+        collection(db, RECEIPTS_COLLECTION),
+        where("userId", "==", userId),
+        orderBy("receiptDate", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      return querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          receiptDate: data.receiptDate?.toDate() || new Date(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+        } as CustomerReceipt;
+      });
+    } catch (error) {
+      console.error("Error fetching receipts:", error);
+      throw new Error("فشل في جلب الإيصالات");
+    }
+  },
+
+  /**
+   * Update an existing receipt
+   */
+  async updateReceipt(
+    receiptId: string,
+    receiptData: Partial<Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">>
+  ): Promise<void> {
+    try {
+      const receiptRef = doc(db, RECEIPTS_COLLECTION, receiptId);
+      const updateData: any = {
+        ...receiptData,
+        updatedAt: Timestamp.now(),
+      };
+
+      if (receiptData.receiptDate) {
+        updateData.receiptDate = Timestamp.fromDate(receiptData.receiptDate);
+      }
+
+      await updateDoc(receiptRef, updateData);
+    } catch (error) {
+      console.error("Error updating receipt:", error);
+      throw new Error("فشل في تحديث الإيصال");
+    }
+  },
+
+  /**
+   * Delete a receipt
+   */
+  async deleteReceipt(receiptId: string): Promise<void> {
+    try {
+      const receiptRef = doc(db, RECEIPTS_COLLECTION, receiptId);
+      await deleteDoc(receiptRef);
+    } catch (error) {
+      console.error("Error deleting receipt:", error);
+      throw new Error("فشل في حذف الإيصال");
     }
   },
 };

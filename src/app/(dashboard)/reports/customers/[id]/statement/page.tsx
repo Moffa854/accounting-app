@@ -14,7 +14,7 @@ export default function CustomerStatementPage() {
   const params = useParams();
   const statementRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
-  const { sales, customers, fetchSales, fetchCustomers } = useSalesStore();
+  const { sales, customers, fetchSales, fetchCustomers, receipts, fetchCustomerReceipts } = useSalesStore();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const customerId = params.id as string;
@@ -26,51 +26,78 @@ export default function CustomerStatementPage() {
     }
   }, [user, fetchSales, fetchCustomers]);
 
+  useEffect(() => {
+    if (customerId) {
+      fetchCustomerReceipts(customerId);
+    }
+  }, [customerId, fetchCustomerReceipts]);
+
   const customer = useMemo(() => {
     return customers.find((c) => c.id === customerId);
   }, [customers, customerId]);
 
   // Get all sales for this customer and prepare account statement
   const accountStatement = useMemo(() => {
-    const customerSales = sales
+    // Combine sales and receipts
+    const allTransactions: any[] = [];
+
+    // Add sales transactions
+    sales
       .filter((s) => s.customerId === customerId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .forEach((sale) => {
+        allTransactions.push({
+          id: sale.id,
+          date: sale.createdAt instanceof Date ? sale.createdAt : new Date(sale.createdAt),
+          invoiceNumber: sale.invoiceNumber,
+          description: sale.invoiceType === "payment"
+            ? `دفعة نقدية`
+            : `فاتورة بيع - إجمالي: ${sale.totalAmount.toFixed(2)} ج.م`,
+          debit: sale.invoiceType === "payment" ? 0 : sale.currentBalance,
+          credit: sale.invoiceType === "payment" ? Math.abs(sale.totalAmount) : 0,
+          type: 'sale',
+        });
+      });
 
+    // Add receipt transactions
+    receipts
+      .filter((r) => r.customerId === customerId)
+      .forEach((receipt) => {
+        allTransactions.push({
+          id: receipt.id,
+          date: receipt.receiptDate instanceof Date ? receipt.receiptDate : new Date(receipt.receiptDate),
+          invoiceNumber: receipt.receiptNumber,
+          description: `إيصال استلام نقدي`,
+          debit: 0,
+          credit: receipt.paidAmount,
+          type: 'receipt',
+        });
+      });
+
+    // Sort all transactions by date
+    allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    // Calculate running balance
     let runningBalance = 0;
-    const transactions = customerSales.map((sale) => {
-      let debit = 0;
-      let credit = 0;
-      let description = "";
-
-      if (sale.invoiceType === "payment") {
-        credit = Math.abs(sale.totalAmount);
-        description = `دفعة نقدية`;
-      } else {
-        debit = sale.currentBalance;
-        description = `فاتورة بيع - إجمالي: ${sale.totalAmount.toFixed(2)} ج.م`;
-      }
-
-      runningBalance = runningBalance + debit - credit;
-
+    const transactions = allTransactions.map((transaction) => {
+      runningBalance = runningBalance + transaction.debit - transaction.credit;
       return {
-        id: sale.id,
-        date: sale.createdAt,
-        invoiceNumber: sale.invoiceNumber,
-        description,
-        debit,
-        credit,
+        ...transaction,
         balance: runningBalance,
       };
     });
 
     return transactions;
-  }, [sales, customerId]);
+  }, [sales, receipts, customerId]);
 
   // Get all items purchased by customer
   const allItems = useMemo(() => {
     const customerSales = sales
       .filter((s) => s.customerId === customerId && s.invoiceType !== "payment")
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateA.getTime() - dateB.getTime();
+      });
 
     const items: Array<{
       invoiceNumber: string;
@@ -427,7 +454,7 @@ export default function CustomerStatementPage() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-slate-900">
-                كشف الحساب (المدين والدائن)
+                كشف الحساب
               </h2>
             </div>
             <div className="rounded-xl overflow-hidden border-2 border-slate-200 shadow-lg">

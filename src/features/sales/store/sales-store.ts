@@ -1,10 +1,11 @@
 // Sales Zustand Store
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Sale, Customer, SaleFormData, SalesState } from "../types";
+import { Sale, Customer, SaleFormData, SalesState, CustomerReceipt } from "../types";
 import {
   salesService,
   customersService,
+  receiptsService,
 } from "../services/sales-service";
 
 interface SalesStore extends SalesState {
@@ -25,6 +26,14 @@ interface SalesStore extends SalesState {
   addPaymentToCustomer: (customerId: string, paymentAmount: number) => Promise<void>;
   deleteCustomer: (customerId: string, userId: string) => Promise<void>;
 
+  // Receipts Actions
+  fetchCustomerReceipts: (customerId: string) => Promise<void>;
+  fetchAllReceipts: (userId: string) => Promise<void>;
+  createReceipt: (receiptData: Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">, userId: string) => Promise<void>;
+  updateReceipt: (receiptId: string, receiptData: Partial<Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">>) => Promise<void>;
+  deleteReceipt: (receiptId: string, customerId: string, userId: string) => Promise<void>;
+  generateReceiptNumber: (userId: string) => Promise<string>;
+
   // Utility
   clearError: () => void;
 }
@@ -35,6 +44,7 @@ export const useSalesStore = create<SalesStore>()(
       // Initial State
       sales: [],
       customers: [],
+      receipts: [],
       isLoading: false,
       error: null,
 
@@ -324,6 +334,139 @@ export const useSalesStore = create<SalesStore>()(
         }
       },
 
+      // ============= Receipts Actions =============
+
+      /**
+       * Fetch all receipts for a specific customer
+       */
+      fetchCustomerReceipts: async (customerId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const receipts = await receiptsService.fetchCustomerReceipts(customerId);
+          set({ receipts, isLoading: false });
+        } catch (error: any) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      /**
+       * Fetch all receipts for a user
+       */
+      fetchAllReceipts: async (userId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const receipts = await receiptsService.fetchAllReceipts(userId);
+          set({ receipts, isLoading: false });
+        } catch (error: any) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      /**
+       * Create a new customer receipt
+       */
+      createReceipt: async (
+        receiptData: Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">,
+        userId: string
+      ) => {
+        set({ isLoading: true, error: null });
+        try {
+          // 1. Create the receipt
+          await receiptsService.createReceipt(receiptData);
+
+          // 2. Update customer balance (reduce by payment amount)
+          await customersService.updateCustomerBalance(
+            receiptData.customerId,
+            receiptData.currentBalance
+          );
+
+          // 3. Refresh receipts and customers
+          await Promise.all([
+            get().fetchCustomerReceipts(receiptData.customerId),
+            get().fetchCustomers(userId),
+          ]);
+
+          set({ isLoading: false });
+        } catch (error: any) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      /**
+       * Update an existing receipt
+       */
+      updateReceipt: async (
+        receiptId: string,
+        receiptData: Partial<Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">>
+      ) => {
+        set({ isLoading: true, error: null });
+        try {
+          await receiptsService.updateReceipt(receiptId, receiptData);
+
+          // Update local state
+          const receipts = get().receipts.map((receipt) =>
+            receipt.id === receiptId ? { ...receipt, ...receiptData } : receipt
+          );
+          set({ receipts, isLoading: false });
+        } catch (error: any) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      /**
+       * Delete a receipt and restore customer balance
+       */
+      deleteReceipt: async (receiptId: string, customerId: string, userId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          // Find the receipt to get payment amount
+          const receipt = get().receipts.find((r) => r.id === receiptId);
+
+          if (receipt) {
+            // Find the customer
+            const customer = get().customers.find((c) => c.id === customerId);
+
+            if (customer) {
+              // Restore customer balance by adding back the payment amount
+              const newBalance = customer.totalBalance + receipt.paidAmount;
+              await customersService.updateCustomerBalance(customerId, newBalance);
+
+              // Update customers in local state
+              const customers = get().customers.map((c) =>
+                c.id === customerId ? { ...c, totalBalance: newBalance } : c
+              );
+              set({ customers });
+            }
+          }
+
+          // Delete the receipt from Firebase
+          await receiptsService.deleteReceipt(receiptId);
+
+          // Update local state - remove receipt
+          const receipts = get().receipts.filter((r) => r.id !== receiptId);
+          set({ receipts, isLoading: false });
+        } catch (error: any) {
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
+
+      /**
+       * Generate unique receipt number
+       */
+      generateReceiptNumber: async (userId: string) => {
+        try {
+          return await receiptsService.generateReceiptNumber(userId);
+        } catch (error: any) {
+          console.error("Error generating receipt number:", error);
+          return `REC-${Date.now()}`;
+        }
+      },
+
       // ============= Utility =============
 
       clearError: () => set({ error: null }),
@@ -333,6 +476,7 @@ export const useSalesStore = create<SalesStore>()(
       partialize: (state) => ({
         sales: state.sales,
         customers: state.customers,
+        receipts: state.receipts,
       }),
     }
   )

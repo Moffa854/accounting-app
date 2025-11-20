@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
+import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
 import { SalesTable } from "@/features/sales/components/sales-table";
 
 export default function SalesPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { sales, isLoading, fetchSales, fetchCustomers } = useSalesStore();
+  const { purchases, fetchPurchases } = usePurchasesStore();
 
   useEffect(() => {
     if (user) {
       fetchSales(user.uid);
       fetchCustomers(user.uid);
+      fetchPurchases(user.uid);
     }
-  }, [user, fetchSales, fetchCustomers]);
+  }, [user, fetchSales, fetchCustomers, fetchPurchases]);
 
   // Filter out payment invoices - only show actual sales
   const actualSales = sales.filter((sale) => sale.invoiceType !== "payment");
@@ -26,6 +29,25 @@ export default function SalesPage() {
   const totalRevenue = actualSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
   const totalPaid = actualSales.reduce((sum, sale) => sum + sale.paidAmount, 0);
   const totalInvoices = actualSales.length;
+
+  // Calculate total profit
+  const totalProfit = actualSales.reduce((sum, sale) => {
+    // Calculate profit for each sale by comparing selling price with purchase price
+    const saleProfit = sale.items.reduce((itemSum, item) => {
+      // Find the product in purchases to get the purchase price
+      const product = purchases.find((p) => p.id === item.productId);
+      if (product) {
+        // Profit = (selling price - purchase price) × quantity
+        const profitPerUnit = item.unitPrice - product.unitPurchasePrice;
+        return itemSum + profitPerUnit * item.quantity;
+      }
+      return itemSum;
+    }, 0);
+    return sum + saleProfit;
+  }, 0);
+
+  // Calculate total deferred amount (المتبقي)
+  const totalDeferred = actualSales.reduce((sum, sale) => sum + sale.deferredAmount, 0);
 
   if (isLoading) {
     return (
@@ -65,7 +87,7 @@ export default function SalesPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         {/* Total Invoices */}
         <div className="bg-white p-6 rounded-lg border border-slate-200">
           <div className="flex items-center justify-between">
@@ -141,6 +163,60 @@ export default function SalesPage() {
                   strokeLinejoin="round"
                   strokeWidth={2}
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Profit */}
+        <div className="bg-white p-6 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-600">إجمالي الربح</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">
+                {totalProfit.toFixed(2)} ج.م
+              </p>
+            </div>
+            <div className="p-3 bg-amber-100 rounded-lg">
+              <svg
+                className="w-6 h-6 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Deferred */}
+        <div className="bg-white p-6 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-600">إجمالي المتبقي</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">
+                {totalDeferred.toFixed(2)} ج.م
+              </p>
+            </div>
+            <div className="p-3 bg-red-100 rounded-lg">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>

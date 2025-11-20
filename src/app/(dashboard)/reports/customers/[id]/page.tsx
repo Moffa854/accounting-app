@@ -24,6 +24,8 @@ export default function CustomerAccountPage() {
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { receipts, fetchCustomerReceipts } = useSalesStore();
+
   useEffect(() => {
     if (user) {
       fetchSales(user.uid);
@@ -31,49 +33,70 @@ export default function CustomerAccountPage() {
     }
   }, [user, fetchSales, fetchCustomers]);
 
+  useEffect(() => {
+    if (customerId) {
+      fetchCustomerReceipts(customerId);
+    }
+  }, [customerId, fetchCustomerReceipts]);
+
   const customer = useMemo(() => {
     return customers.find((c) => c.id === customerId);
   }, [customers, customerId]);
 
   // Get all sales for this customer and prepare account statement
   const accountStatement = useMemo(() => {
-    // Get all sales and sort by date
-    const customerSales = sales
+    // Combine sales and receipts
+    const allTransactions: any[] = [];
+
+    // Add sales transactions
+    sales
       .filter((s) => s.customerId === customerId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .forEach((sale) => {
+        allTransactions.push({
+          id: sale.id,
+          date: sale.createdAt instanceof Date ? sale.createdAt : new Date(sale.createdAt),
+          invoiceNumber: sale.invoiceNumber,
+          description: sale.invoiceType === "payment"
+            ? `دفعة نقدية`
+            : `فاتورة بيع - إجمالي: ${sale.totalAmount.toFixed(2)} ج.م`,
+          debit: sale.invoiceType === "payment" ? 0 : sale.currentBalance,
+          credit: sale.invoiceType === "payment" ? Math.abs(sale.totalAmount) : 0,
+          type: 'sale',
+          invoiceType: sale.invoiceType,
+        });
+      });
 
+    // Add receipt transactions - filter for this customer only
+    receipts
+      .filter((r) => r.customerId === customerId)
+      .forEach((receipt) => {
+        allTransactions.push({
+          id: receipt.id,
+          date: receipt.receiptDate instanceof Date ? receipt.receiptDate : new Date(receipt.receiptDate),
+          invoiceNumber: receipt.receiptNumber,
+          description: `إيصال استلام نقدي`,
+          debit: 0,
+          credit: receipt.paidAmount,
+          type: 'receipt',
+          invoiceType: 'receipt',
+        });
+      });
+
+    // Sort all transactions by date
+    allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    // Calculate running balance
     let runningBalance = 0;
-    const transactions = customerSales.map((sale) => {
-      let debit = 0; // مدين
-      let credit = 0; // دائن
-      let description = "";
-
-      if (sale.invoiceType === "payment") {
-        // Payment transaction (دفعة)
-        credit = Math.abs(sale.totalAmount);
-        description = `دفعة نقدية`;
-      } else {
-        // Sale transaction (بيع)
-        debit = sale.currentBalance; // المبلغ المتبقي من الفاتورة
-        description = `فاتورة بيع - إجمالي: ${sale.totalAmount.toFixed(2)} ج.م`;
-      }
-
-      runningBalance = runningBalance + debit - credit;
-
+    const transactions = allTransactions.map((transaction) => {
+      runningBalance = runningBalance + transaction.debit - transaction.credit;
       return {
-        id: sale.id,
-        date: sale.createdAt,
-        invoiceNumber: sale.invoiceNumber,
-        description,
-        debit,
-        credit,
+        ...transaction,
         balance: runningBalance,
-        invoiceType: sale.invoiceType,
       };
     });
 
     return transactions;
-  }, [sales, customerId]);
+  }, [sales, receipts, customerId]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -180,8 +203,31 @@ export default function CustomerAccountPage() {
           </Button>
         </div>
 
-        <h1 className="text-3xl font-bold text-slate-900">{customer.name}</h1>
-        <p className="text-slate-600 mt-1">رقم الهاتف: {customer.phone}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">{customer.name}</h1>
+            <p className="text-slate-600 mt-1">رقم الهاتف: {customer.phone}</p>
+          </div>
+          <Button
+            onClick={() => router.push(`/reports/customers/${customerId}/add-receipt`)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <svg
+              className="w-5 h-5 ml-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            إيصال استلام
+          </Button>
+        </div>
       </div>
 
       {/* Account Summary */}
@@ -287,6 +333,78 @@ export default function CustomerAccountPage() {
         )}
       </div>
 
+      {/* Receipts Table */}
+      {receipts.length > 0 && (
+        <div className="bg-white rounded-lg border border-slate-200 mb-6">
+          <div className="p-4 border-b border-slate-200">
+            <h2 className="text-lg font-bold text-slate-900">إيصالات الاستلام</h2>
+            <p className="text-sm text-slate-600">جميع إيصالات الاستلام النقدي</p>
+          </div>
+
+          <div className="overflow-x-auto" dir="rtl">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b-2 border-slate-200">
+                <tr>
+                  <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                    التاريخ
+                  </th>
+                  <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                    رقم الإيصال
+                  </th>
+                  <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                    المبلغ
+                  </th>
+                  <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
+                    الرصيد السابق
+                  </th>
+                  <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
+                    الرصيد الحالي
+                  </th>
+                  <th className="text-center px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                    إجراءات
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {receipts.map((receipt) => (
+                  <tr key={receipt.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm text-slate-900">
+                      {format(receipt.receiptDate, "dd/MM/yyyy", { locale: ar })}
+                    </td>
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm font-semibold text-slate-900">
+                      {receipt.receiptNumber}
+                    </td>
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm font-semibold text-green-600">
+                      {receipt.paidAmount.toFixed(2)} ج.م
+                    </td>
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm text-slate-900 hidden md:table-cell">
+                      {receipt.previousBalance.toFixed(2)} ج.م
+                    </td>
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm text-slate-900 hidden md:table-cell">
+                      {receipt.currentBalance.toFixed(2)} ج.م
+                    </td>
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          router.push(
+                            `/reports/customers/${customerId}/receipt/${receipt.id}`
+                          )
+                        }
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        عرض
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Account Statement Table */}
       <div className="bg-white rounded-lg border border-slate-200">
         <div className="p-4 border-b border-slate-200">
@@ -328,11 +446,11 @@ export default function CustomerAccountPage() {
                   <tr
                     key={transaction.id}
                     onClick={() =>
-                      transaction.invoiceType !== "payment" &&
+                      transaction.type === "sale" && transaction.invoiceType !== "payment" &&
                       router.push(`/sales/${transaction.id}`)
                     }
                     className={`hover:bg-slate-50 transition-colors ${
-                      transaction.invoiceType !== "payment" ? "cursor-pointer" : ""
+                      transaction.type === "sale" && transaction.invoiceType !== "payment" ? "cursor-pointer" : ""
                     }`}
                   >
                     <td className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm text-slate-900 hidden sm:table-cell">

@@ -53,9 +53,25 @@ export interface SaleFormData {
   currentBalance: number;
 }
 
+export interface CustomerReceipt {
+  id: string;
+  receiptNumber: string; // رقم الإيصال
+  customerId: string;
+  customerName: string;
+  paidAmount: number; // المبلغ المدفوع
+  previousBalance: number; // الرصيد السابق
+  currentBalance: number; // الرصيد الحالي بعد الدفع
+  receiptDate: Date; // تاريخ الإيصال
+  notes?: string; // ملاحظات
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+}
+
 export interface SalesState {
   sales: Sale[];
   customers: Customer[];
+  receipts: CustomerReceipt[];
   isLoading: boolean;
   error: string | null;
 }
