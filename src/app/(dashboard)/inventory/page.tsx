@@ -1,21 +1,45 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface GroupedProduct {
   productName: string;
   totalQuantity: number;
   purchaseCount: number;
+  currentUnitSellingPrice: number;
 }
 
 export default function InventoryPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { purchases, isLoading, fetchPurchases } = usePurchasesStore();
+  const { purchases, isLoading, fetchPurchases, updateSellingPriceByProductName } =
+    usePurchasesStore();
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<GroupedProduct | null>(null);
+  const [newSellingPrice, setNewSellingPrice] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -37,6 +61,7 @@ export default function InventoryPage() {
           productName: purchase.productName,
           totalQuantity: purchase.quantity,
           purchaseCount: 1,
+          currentUnitSellingPrice: purchase.unitSellingPrice,
         });
       }
     });
@@ -45,6 +70,39 @@ export default function InventoryPage() {
       a.productName.localeCompare(b.productName, "ar")
     );
   }, [purchases]);
+
+  const handleEditPrice = (product: GroupedProduct) => {
+    setSelectedProduct(product);
+    setNewSellingPrice(product.currentUnitSellingPrice.toString());
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveNewPrice = async () => {
+    if (!selectedProduct || !user) return;
+
+    const price = parseFloat(newSellingPrice);
+    if (isNaN(price) || price < 0) {
+      toast.error("يرجى إدخال سعر صحيح");
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      await updateSellingPriceByProductName(
+        user.uid,
+        selectedProduct.productName,
+        price
+      );
+      toast.success("تم تحديث سعر البيع بنجاح");
+      setEditDialogOpen(false);
+      setSelectedProduct(null);
+      setNewSellingPrice("");
+    } catch (error: any) {
+      toast.error(error.message || "حدث خطأ أثناء تحديث السعر");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -63,14 +121,9 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">إجمالي الكميات</h1>
-          <p className="text-slate-600 mt-1">
-            عرض تفصيلي لكميات كل منتج
-          </p>
+          <p className="text-slate-600 mt-1">عرض تفصيلي لكميات كل منتج</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => router.push("/purchases")}
-        >
+        <Button variant="outline" onClick={() => router.push("/purchases")}>
           <svg
             className="w-5 h-5 ml-2"
             fill="none"
@@ -128,13 +181,19 @@ export default function InventoryPage() {
                 <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
                   عدد عمليات الشراء
                 </th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
+                  سعر البيع
+                </th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  الإجراءات
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {groupedProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-6 py-12 text-center text-slate-500"
                   >
                     لا توجد منتجات
@@ -162,6 +221,56 @@ export default function InventoryPage() {
                     <td className="px-6 py-4 text-center text-sm text-slate-600 hidden md:table-cell">
                       {product.purchaseCount} عملية شراء
                     </td>
+                    <td className="px-6 py-4 text-center text-sm text-slate-900 hidden md:table-cell">
+                      <span className="font-semibold text-blue-600">
+                        {product.currentUnitSellingPrice.toFixed(2)} ج.م
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                              />
+                            </svg>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditPrice(product)}
+                          >
+                            <svg
+                              className="w-4 h-4 ml-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                            تعديل سعر البيع
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
                   </tr>
                 ))
               )}
@@ -169,6 +278,49 @@ export default function InventoryPage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Price Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تعديل سعر البيع</DialogTitle>
+            <DialogDescription>
+              تعديل سعر بيع المنتج: <strong>{selectedProduct?.productName}</strong>
+              <br />
+              <span className="text-sm text-slate-500">
+                سيتم تحديث السعر لجميع عمليات الشراء ({selectedProduct?.purchaseCount}{" "}
+                عملية)
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="sellingPrice">سعر البيع للوحدة (ج.م)</Label>
+              <Input
+                id="sellingPrice"
+                type="number"
+                step="0.01"
+                value={newSellingPrice}
+                onChange={(e) => setNewSellingPrice(e.target.value)}
+                placeholder="أدخل سعر البيع الجديد"
+                disabled={isUpdating}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={isUpdating}
+            >
+              إلغاء
+            </Button>
+            <Button onClick={handleSaveNewPrice} disabled={isUpdating}>
+              {isUpdating ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

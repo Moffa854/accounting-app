@@ -8,9 +8,10 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/firestore";
-import type { Settings, ExchangeRates } from "../types";
+import type { Settings, ExchangeRates, CompanySettings, CompanySettingsFormData } from "../types";
 
 const COLLECTION_NAME = "settings";
+const COMPANY_SETTINGS_COLLECTION = "company_settings";
 
 /**
  * Converts Firestore document to Settings object
@@ -96,5 +97,85 @@ export async function updateExchangeRates(
   } catch (error) {
     console.error("Error updating exchange rates:", error);
     throw new Error("Failed to update exchange rates");
+  }
+}
+
+/**
+ * Fetches company settings from Firestore
+ */
+export async function fetchCompanySettings(userId: string): Promise<CompanySettings | null> {
+  try {
+    const docRef = doc(db, COMPANY_SETTINGS_COLLECTION, userId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        companyName: data.companyName || "",
+        companyPhone: data.companyPhone || "",
+        whatsappQRCode: data.whatsappQRCode || "",
+        companyLogo: data.companyLogo || "",
+        userId: data.userId,
+        createdAt: data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate()
+          : new Date(data.createdAt),
+        updatedAt: data.updatedAt instanceof Timestamp
+          ? data.updatedAt.toDate()
+          : new Date(data.updatedAt),
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching company settings:", error);
+    throw new Error("Failed to fetch company settings");
+  }
+}
+
+/**
+ * Updates or creates company settings
+ */
+export async function updateCompanySettings(
+  userId: string,
+  settingsData: CompanySettingsFormData
+): Promise<void> {
+  try {
+    const docRef = doc(db, COMPANY_SETTINGS_COLLECTION, userId);
+
+    await setDoc(
+      docRef,
+      {
+        ...settingsData,
+        userId,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error updating company settings:", error);
+    throw new Error("Failed to update company settings");
+  }
+}
+
+/**
+ * Creates initial company settings
+ */
+export async function createCompanySettings(
+  userId: string,
+  settingsData: CompanySettingsFormData
+): Promise<void> {
+  try {
+    const docRef = doc(db, COMPANY_SETTINGS_COLLECTION, userId);
+
+    await setDoc(docRef, {
+      ...settingsData,
+      userId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error creating company settings:", error);
+    throw new Error("Failed to create company settings");
   }
 }

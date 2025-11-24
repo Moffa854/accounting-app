@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
 import { useReactToPrint } from "react-to-print";
+import { InvoiceHeader } from "@/components/common/InvoiceHeader";
+import { InvoiceFooter } from "@/components/common/InvoiceFooter";
 
 export default function CustomerStatementPage() {
   const router = useRouter();
@@ -214,32 +216,18 @@ export default function CustomerStatementPage() {
           }}
         >
           {/* Header */}
-          <div className="text-center mb-10 pb-8 border-b-4 border-gradient-to-r from-blue-500 to-purple-600 relative">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-            <div className="pt-4">
-              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                كشف حساب عميل
-              </h1>
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <svg
-                  className="w-5 h-5 text-slate-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="text-lg text-slate-600 font-medium">
-                  التاريخ: {format(new Date(), "dd/MM/yyyy", { locale: ar })}
+          <InvoiceHeader
+            title="كشف حساب عميل"
+            subtitle={customer ? `العميل: ${customer.name}` : ''}
+            rightContent={
+              <div className="bg-white/20 px-4 py-2 rounded">
+                <p className="text-sm text-blue-100">التاريخ</p>
+                <p className="text-base font-semibold">
+                  {format(new Date(), "dd/MM/yyyy", { locale: ar })}
                 </p>
               </div>
-            </div>
-          </div>
+            }
+          />
 
           {/* Customer Info */}
           <div className="mb-10 bg-gradient-to-br from-slate-50 to-slate-100 p-8 rounded-2xl border-2 border-slate-200 shadow-md" dir="rtl">
@@ -690,32 +678,7 @@ export default function CustomerStatementPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-12 pt-8 border-t-2 border-slate-300 text-center">
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-2xl">
-              <svg
-                className="w-12 h-12 text-blue-600 mx-auto mb-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                />
-              </svg>
-              <p className="text-base font-bold text-slate-900 mb-2">
-                تم إنشاء هذا الكشف بواسطة نظام المحاسبة الاحترافي
-              </p>
-              <p className="text-sm text-slate-600 mb-1">
-                لأي استفسارات أو ملاحظات يرجى التواصل معنا
-              </p>
-              <p className="text-lg font-bold text-blue-600 mt-3">
-                شكراً لتعاملكم معنا 🙏
-              </p>
-            </div>
-          </div>
+          <InvoiceFooter />
         </div>
       </div>
     </div>

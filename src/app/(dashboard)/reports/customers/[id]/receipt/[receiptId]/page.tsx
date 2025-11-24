@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrowRight, Printer, Edit, Trash2, MoreVertical, Loader2 } from "lucide-react";
 import { CustomerReceipt } from "@/features/sales/types";
+import { InvoiceHeader } from "@/components/common/InvoiceHeader";
+import { InvoiceFooter } from "@/components/common/InvoiceFooter";
 
 export default function ReceiptViewPage() {
   const router = useRouter();
@@ -154,30 +156,26 @@ export default function ReceiptViewPage() {
       <div
         id="receipt-print-area"
         ref={printRef}
-        className="bg-white border-2 border-slate-300 rounded-lg p-8 md:p-12"
+        className="bg-white border-2 border-slate-300 rounded-lg overflow-hidden"
         dir="rtl"
       >
         {/* Header */}
-        <div className="text-center mb-8 border-b-2 border-slate-300 pb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">إيصال استلام نقدي</h1>
-          <p className="text-lg text-slate-600">Cash Receipt Voucher</p>
-        </div>
+        <InvoiceHeader
+          title="إيصال استلام"
+          subtitle={`رقم الإيصال: ${receipt?.receiptNumber || ''}`}
+          rightContent={
+            <div className="bg-white/20 px-4 py-2 rounded">
+              <p className="text-sm text-blue-100">التاريخ</p>
+              <p className="text-base font-semibold">
+                {receipt?.receiptDate ? format(receipt.receiptDate, "dd/MM/yyyy", { locale: ar }) : ''}
+              </p>
+            </div>
+          }
+        />
 
-        {/* Receipt Details */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          <div>
-            <p className="text-sm text-slate-600 mb-1">رقم الإيصال</p>
-            <p className="text-xl font-bold text-slate-900">{receipt.receiptNumber}</p>
-          </div>
-          <div className="text-left">
-            <p className="text-sm text-slate-600 mb-1">التاريخ</p>
-            <p className="text-xl font-bold text-slate-900">
-              {format(receipt.receiptDate, "dd/MM/yyyy", { locale: ar })}
-            </p>
-          </div>
-        </div>
-
-        {/* Customer Info */}
+        {/* Receipt Content */}
+        <div className="p-8 md:p-12">
+          {/* Customer Info */}
         <div className="mb-8 bg-slate-50 p-6 rounded-lg">
           <p className="text-sm text-slate-600 mb-2">استلمنا من السيد / السادة</p>
           <p className="text-2xl font-bold text-slate-900">{receipt.customerName}</p>
@@ -230,14 +228,10 @@ export default function ReceiptViewPage() {
             <p className="text-xs text-slate-500">Accountant Signature</p>
           </div>
         </div>
+        </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 pt-6 border-t border-slate-200">
-          <p className="text-xs text-slate-500">
-            تم إنشاء هذا الإيصال بتاريخ{" "}
-            {format(receipt.createdAt, "dd/MM/yyyy - hh:mm a", { locale: ar })}
-          </p>
-        </div>
+        <InvoiceFooter />
       </div>
     </div>
   );

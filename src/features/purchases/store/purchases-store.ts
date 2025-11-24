@@ -9,6 +9,7 @@ interface PurchasesStore extends PurchasesState {
   createPurchase: (purchaseData: PurchaseFormData, userId: string) => Promise<void>;
   updatePurchase: (purchaseId: string, purchaseData: Partial<PurchaseFormData>) => Promise<void>;
   deletePurchase: (purchaseId: string) => Promise<void>;
+  updateSellingPriceByProductName: (userId: string, productName: string, newUnitSellingPrice: number) => Promise<void>;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
 }
@@ -73,6 +74,27 @@ export const usePurchasesStore = create<PurchasesStore>()((set, get) => ({
       // Remove from local state
       const purchases = get().purchases.filter((p) => p.id !== purchaseId);
       set({ purchases, isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  updateSellingPriceByProductName: async (
+    userId: string,
+    productName: string,
+    newUnitSellingPrice: number
+  ) => {
+    try {
+      set({ isLoading: true, error: null });
+      await purchasesService.updateSellingPriceByProductName(
+        userId,
+        productName,
+        newUnitSellingPrice
+      );
+      // Refresh purchases list
+      await get().fetchPurchases(userId);
+      set({ isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
       throw error;

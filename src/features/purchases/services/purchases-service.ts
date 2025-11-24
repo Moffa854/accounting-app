@@ -94,4 +94,41 @@ export const purchasesService = {
       throw new Error(error.message || "Failed to delete purchase");
     }
   },
+
+  /**
+   * Update selling price for all purchases with the same product name
+   */
+  async updateSellingPriceByProductName(
+    userId: string,
+    productName: string,
+    newUnitSellingPrice: number
+  ): Promise<void> {
+    try {
+      // Fetch all purchases for this user with this product name
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        where("userId", "==", userId),
+        where("productName", "==", productName)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      // Update each purchase
+      const updatePromises = querySnapshot.docs.map((document) => {
+        const data = document.data();
+        const quantity = data.quantity || 0;
+        const newSellingPrice = newUnitSellingPrice * quantity;
+
+        return updateDoc(doc(db, COLLECTION_NAME, document.id), {
+          unitSellingPrice: newUnitSellingPrice,
+          sellingPrice: newSellingPrice,
+          updatedAt: Timestamp.now(),
+        });
+      });
+
+      await Promise.all(updatePromises);
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to update selling price");
+    }
+  },
 };

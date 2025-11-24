@@ -9,6 +9,8 @@ import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
 import { INVOICE_TYPE_LABELS } from "@/features/sales/types";
 import { useReactToPrint } from "react-to-print";
+import { InvoiceHeader } from "@/components/common/InvoiceHeader";
+import { InvoiceFooter } from "@/components/common/InvoiceFooter";
 
 export default function InvoiceDetailsPage() {
   const router = useRouter();
@@ -103,14 +105,10 @@ export default function InvoiceDetailsPage() {
           style={{ maxWidth: '210mm' }}
         >
           {/* Invoice Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 print:bg-blue-600">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-2xl font-bold mb-2">فاتورة بيع</h1>
-                <p className="text-base text-blue-100">
-                  رقم الفاتورة: <span className="font-semibold">{sale.invoiceNumber}</span>
-                </p>
-              </div>
+          <InvoiceHeader
+            title="فاتورة بيع"
+            subtitle={`رقم الفاتورة: ${sale.invoiceNumber}`}
+            rightContent={
               <div className="text-left">
                 <div className="bg-white/20 px-4 py-2 rounded">
                   <p className="text-sm text-blue-100">التاريخ</p>
@@ -119,8 +117,8 @@ export default function InvoiceDetailsPage() {
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
+            }
+          />
 
           {/* Customer & Invoice Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 border-b border-slate-200">
@@ -332,13 +330,8 @@ export default function InvoiceDetailsPage() {
           </div>
 
           {/* Invoice Footer */}
-          <div className="bg-slate-100 px-5 py-3 border-t border-slate-300 print:bg-slate-100">
-            <div className="text-center text-sm text-slate-600">
-              <p className="mb-1">شكراً لتعاملكم معنا</p>
-              <p className="text-xs text-slate-500">
-                تم إنشاء هذه الفاتورة بواسطة نظام المحاسبة
-              </p>
-            </div>
+          <div className="px-5 pb-5">
+            <InvoiceFooter />
           </div>
         </div>
       </div>

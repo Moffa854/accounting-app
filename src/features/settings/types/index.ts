@@ -1,5 +1,6 @@
 // Settings Feature Types
 
+// Exchange Rates
 export interface ExchangeRates {
   EGP: number;
   USD: number;
@@ -15,17 +16,29 @@ export interface Settings {
   updatedAt: Date;
 }
 
-export interface SettingsState {
-  settings: Settings | null;
-  isLoading: boolean;
-  error: string | null;
+// Company Settings
+export interface CompanySettings {
+  id: string;
+  companyName: string;
+  companyPhone: string;
+  whatsappQRCode: string; // Cloudinary URL
+  companyLogo: string; // Cloudinary URL
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface ExchangeRateApiResponse {
-  result: string;
-  conversion_rates: {
-    EGP: number;
-    USD: number;
-    GBP: number;
-  };
+export interface CompanySettingsFormData {
+  companyName: string;
+  companyPhone: string;
+  whatsappQRCode?: string;
+  companyLogo?: string;
+}
+
+// Store State
+export interface SettingsState {
+  settings: Settings | null;
+  companySettings: CompanySettings | null;
+  isLoading: boolean;
+  error: string | null;
 }
