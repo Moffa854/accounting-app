@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
@@ -52,10 +50,10 @@ export default function InvoiceDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 print:p-0 print:bg-white print:min-h-0">
       <div className="max-w-4xl mx-auto">
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 mb-6">
+        {/* Action Buttons - Hidden on Print */}
+        <div className="flex flex-wrap gap-3 mb-6 print:hidden">
           <Button
             variant="outline"
             onClick={() => router.push("/sales")}
@@ -99,8 +97,9 @@ export default function InvoiceDetailsPage() {
 
         {/* Invoice */}
         <div
+          id="invoice-print-area"
           ref={invoiceRef}
-          className="bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none"
+          className="bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none print:rounded-none"
           dir="rtl"
           style={{ maxWidth: '210mm' }}
         >
@@ -108,20 +107,11 @@ export default function InvoiceDetailsPage() {
           <InvoiceHeader
             title="فاتورة بيع"
             subtitle={`رقم الفاتورة: ${sale.invoiceNumber}`}
-            rightContent={
-              <div className="text-left">
-                <div className="bg-white/20 px-4 py-2 rounded">
-                  <p className="text-sm text-blue-100">التاريخ</p>
-                  <p className="text-base font-semibold">
-                    {format(sale.createdAt, "dd/MM/yyyy", { locale: ar })}
-                  </p>
-                </div>
-              </div>
-            }
+            date={sale.createdAt}
           />
 
           {/* Customer & Invoice Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 border-b border-slate-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 border-b border-slate-200 print:grid-cols-2">
             {/* Customer Info */}
             <div className="bg-slate-50 p-4 rounded">
               <h2 className="text-base font-bold text-slate-900 mb-3 flex items-center">
@@ -184,12 +174,6 @@ export default function InvoiceDetailsPage() {
                   >
                     {INVOICE_TYPE_LABELS[sale.invoiceType]}
                   </span>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600">التوقيت</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {format(sale.createdAt, "hh:mm a", { locale: ar })}
-                  </p>
                 </div>
               </div>
             </div>
@@ -335,6 +319,61 @@ export default function InvoiceDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+
+          body > * {
+            display: none !important;
+          }
+
+          body > #__next {
+            display: block !important;
+          }
+
+          #invoice-print-area {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 10mm !important;
+            box-shadow: none !important;
+          }
+
+          #invoice-print-area,
+          #invoice-print-area * {
+            visibility: visible !important;
+          }
+
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          img {
+            max-width: 100% !important;
+            display: block !important;
+          }
+
+          @page {
+            size: A4;
+            margin: 5mm;
+          }
+        }
+      `}</style>
     </div>
   );
 }

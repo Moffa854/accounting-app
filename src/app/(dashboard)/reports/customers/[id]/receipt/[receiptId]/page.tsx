@@ -163,45 +163,38 @@ export default function ReceiptViewPage() {
         <InvoiceHeader
           title="إيصال استلام"
           subtitle={`رقم الإيصال: ${receipt?.receiptNumber || ''}`}
-          rightContent={
-            <div className="bg-white/20 px-4 py-2 rounded">
-              <p className="text-sm text-blue-100">التاريخ</p>
-              <p className="text-base font-semibold">
-                {receipt?.receiptDate ? format(receipt.receiptDate, "dd/MM/yyyy", { locale: ar }) : ''}
-              </p>
-            </div>
-          }
+          date={receipt?.receiptDate || new Date()}
         />
 
         {/* Receipt Content */}
-        <div className="p-8 md:p-12">
+        <div className="p-4 md:p-6">
           {/* Customer Info */}
-        <div className="mb-8 bg-slate-50 p-6 rounded-lg">
-          <p className="text-sm text-slate-600 mb-2">استلمنا من السيد / السادة</p>
-          <p className="text-2xl font-bold text-slate-900">{receipt.customerName}</p>
+        <div className="mb-4 bg-slate-50 p-3 rounded-lg">
+          <p className="text-xs text-slate-600 mb-1">استلمنا من السيد / السادة</p>
+          <p className="text-lg font-bold text-slate-900">{receipt.customerName}</p>
         </div>
 
         {/* Amount */}
-        <div className="mb-8">
-          <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6">
-            <p className="text-sm text-slate-600 mb-2 text-center">المبلغ المستلم</p>
-            <p className="text-4xl font-bold text-green-700 text-center">
+        <div className="mb-4">
+          <div className="bg-green-50 border border-green-300 rounded-lg p-3">
+            <p className="text-xs text-slate-600 mb-1 text-center">المبلغ المستلم</p>
+            <p className="text-2xl font-bold text-green-700 text-center">
               {receipt.paidAmount.toFixed(2)} جنيه
             </p>
           </div>
         </div>
 
         {/* Balance Details */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <p className="text-sm text-slate-600 mb-2">الرصيد السابق</p>
-            <p className="text-xl font-bold text-red-600">
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-slate-50 p-3 rounded-lg">
+            <p className="text-xs text-slate-600 mb-1">الرصيد السابق</p>
+            <p className="text-base font-bold text-red-600">
               {receipt.previousBalance.toFixed(2)} ج.م
             </p>
           </div>
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <p className="text-sm text-slate-600 mb-2">الرصيد الحالي</p>
-            <p className="text-xl font-bold text-slate-900">
+          <div className="bg-slate-50 p-3 rounded-lg">
+            <p className="text-xs text-slate-600 mb-1">الرصيد الحالي</p>
+            <p className="text-base font-bold text-slate-900">
               {receipt.currentBalance.toFixed(2)} ج.م
             </p>
           </div>
@@ -209,23 +202,21 @@ export default function ReceiptViewPage() {
 
         {/* Notes */}
         {receipt.notes && (
-          <div className="mb-8 bg-slate-50 p-6 rounded-lg">
-            <p className="text-sm text-slate-600 mb-2">ملاحظات</p>
-            <p className="text-slate-900">{receipt.notes}</p>
+          <div className="mb-4 bg-slate-50 p-3 rounded-lg">
+            <p className="text-xs text-slate-600 mb-1">ملاحظات</p>
+            <p className="text-sm text-slate-900">{receipt.notes}</p>
           </div>
         )}
 
         {/* Signatures */}
-        <div className="grid grid-cols-2 gap-12 mt-12 pt-8 border-t-2 border-slate-200">
+        <div className="grid grid-cols-2 gap-6 mt-6 pt-4 border-t border-slate-200">
           <div className="text-center">
-            <div className="border-b-2 border-slate-300 pb-2 mb-2 min-h-[60px]"></div>
-            <p className="text-sm font-semibold text-slate-700">توقيع المستلم</p>
-            <p className="text-xs text-slate-500">Receiver Signature</p>
+            <div className="border-b border-slate-300 pb-2 mb-1 min-h-10"></div>
+            <p className="text-xs font-semibold text-slate-700">توقيع المستلم</p>
           </div>
           <div className="text-center">
-            <div className="border-b-2 border-slate-300 pb-2 mb-2 min-h-[60px]"></div>
-            <p className="text-sm font-semibold text-slate-700">توقيع المحاسب</p>
-            <p className="text-xs text-slate-500">Accountant Signature</p>
+            <div className="border-b border-slate-300 pb-2 mb-1 min-h-10"></div>
+            <p className="text-xs font-semibold text-slate-700">توقيع المحاسب</p>
           </div>
         </div>
         </div>

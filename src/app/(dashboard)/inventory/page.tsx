@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
+import { useSalesStore } from "@/features/sales/store/sales-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +26,9 @@ import { toast } from "sonner";
 
 interface GroupedProduct {
   productName: string;
-  totalQuantity: number;
+  purchasedQuantity: number;
+  soldQuantity: number;
+  availableQuantity: number;
   purchaseCount: number;
   currentUnitSellingPrice: number;
 }
@@ -35,6 +38,7 @@ export default function InventoryPage() {
   const { user } = useAuthStore();
   const { purchases, isLoading, fetchPurchases, updateSellingPriceByProductName } =
     usePurchasesStore();
+  const { sales, fetchSales } = useSalesStore();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<GroupedProduct | null>(null);
@@ -44,32 +48,53 @@ export default function InventoryPage() {
   useEffect(() => {
     if (user) {
       fetchPurchases(user.uid);
+      fetchSales(user.uid);
     }
-  }, [user, fetchPurchases]);
+  }, [user, fetchPurchases, fetchSales]);
 
-  // Group purchases by product name
+  // Group purchases by product name and subtract sold quantities
   const groupedProducts = useMemo(() => {
     const groups = new Map<string, GroupedProduct>();
 
+    // Add purchased quantities
     purchases.forEach((purchase) => {
       const existing = groups.get(purchase.productName);
       if (existing) {
-        existing.totalQuantity += purchase.quantity;
+        existing.purchasedQuantity += purchase.quantity;
         existing.purchaseCount += 1;
       } else {
         groups.set(purchase.productName, {
           productName: purchase.productName,
-          totalQuantity: purchase.quantity,
+          purchasedQuantity: purchase.quantity,
+          soldQuantity: 0,
+          availableQuantity: purchase.quantity,
           purchaseCount: 1,
           currentUnitSellingPrice: purchase.unitSellingPrice,
         });
       }
     });
 
+    // Subtract sold quantities (exclude payment invoices)
+    sales
+      .filter((sale) => sale.invoiceType !== "payment")
+      .forEach((sale) => {
+        sale.items.forEach((item) => {
+          const existing = groups.get(item.productName);
+          if (existing) {
+            existing.soldQuantity += item.quantity;
+          }
+        });
+      });
+
+    // Calculate available quantity
+    groups.forEach((product) => {
+      product.availableQuantity = product.purchasedQuantity - product.soldQuantity;
+    });
+
     return Array.from(groups.values()).sort((a, b) =>
       a.productName.localeCompare(b.productName, "ar")
     );
-  }, [purchases]);
+  }, [purchases, sales]);
 
   const handleEditPrice = (product: GroupedProduct) => {
     setSelectedProduct(product);
@@ -142,23 +167,29 @@ export default function InventoryPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-6 rounded-lg border border-slate-200">
-          <p className="text-sm text-slate-600">إجمالي الكميات</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">
-            {purchases.reduce((sum, p) => sum + p.quantity, 0)}
+          <p className="text-sm text-slate-600">الكمية المتاحة</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">
+            {groupedProducts.reduce((sum, p) => sum + p.availableQuantity, 0)}
           </p>
         </div>
         <div className="bg-white p-6 rounded-lg border border-slate-200">
-          <p className="text-sm text-slate-600">عدد المنتجات المختلفة</p>
+          <p className="text-sm text-slate-600">إجمالي المشتريات</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">
+            {groupedProducts.reduce((sum, p) => sum + p.purchasedQuantity, 0)}
+          </p>
+        </div>
+        <div className="bg-white p-6 rounded-lg border border-slate-200">
+          <p className="text-sm text-slate-600">إجمالي المبيعات</p>
+          <p className="text-2xl font-bold text-orange-600 mt-1">
+            {groupedProducts.reduce((sum, p) => sum + p.soldQuantity, 0)}
+          </p>
+        </div>
+        <div className="bg-white p-6 rounded-lg border border-slate-200">
+          <p className="text-sm text-slate-600">عدد المنتجات</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">
             {groupedProducts.length}
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg border border-slate-200">
-          <p className="text-sm text-slate-600">إجمالي عمليات الشراء</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">
-            {purchases.length}
           </p>
         </div>
       </div>
@@ -169,22 +200,25 @@ export default function InventoryPage() {
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-700">
                   #
                 </th>
-                <th className="text-right px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                <th className="text-right px-4 py-3 text-sm font-semibold text-slate-700">
                   اسم المنتج
                 </th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                  الكمية الإجمالية
+                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-700">
+                  الكمية المتاحة
                 </th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
-                  عدد عمليات الشراء
+                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-700 hidden md:table-cell">
+                  المشتريات
                 </th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
+                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-700 hidden md:table-cell">
+                  المبيعات
+                </th>
+                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-700 hidden md:table-cell">
                   سعر البيع
                 </th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-700">
                   الإجراءات
                 </th>
               </tr>
@@ -193,7 +227,7 @@ export default function InventoryPage() {
               {groupedProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-12 text-center text-slate-500"
                   >
                     لا توجد منتجات
@@ -214,12 +248,21 @@ export default function InventoryPage() {
                       </p>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                        {product.totalQuantity}
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                        product.availableQuantity > 0
+                          ? "bg-green-100 text-green-800"
+                          : product.availableQuantity === 0
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                      }`}>
+                        {product.availableQuantity}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-slate-600 hidden md:table-cell">
-                      {product.purchaseCount} عملية شراء
+                      {product.purchasedQuantity}
+                    </td>
+                    <td className="px-6 py-4 text-center text-sm text-slate-600 hidden md:table-cell">
+                      {product.soldQuantity}
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-slate-900 hidden md:table-cell">
                       <span className="font-semibold text-blue-600">

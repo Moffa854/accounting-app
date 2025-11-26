@@ -159,10 +159,10 @@ export default function CustomerStatementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 print:p-0 print:bg-white print:min-h-0">
       <div className="max-w-4xl mx-auto">
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 mb-6">
+        {/* Action Buttons - Hidden on Print */}
+        <div className="flex flex-wrap gap-3 mb-6 print:hidden">
           <Button
             variant="outline"
             onClick={() => router.push(`/reports/customers/${customerId}`)}
@@ -206,27 +206,21 @@ export default function CustomerStatementPage() {
 
         {/* Statement */}
         <div
+          id="statement-print-area"
           ref={statementRef}
-          className="bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200"
+          className="bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200 print:shadow-none print:border-0 print:rounded-none"
           style={{
-            minHeight: "297mm",
             width: "210mm",
             margin: "0 auto",
-            padding: "20mm",
+            padding: "15mm",
           }}
+          dir="rtl"
         >
           {/* Header */}
           <InvoiceHeader
             title="كشف حساب عميل"
             subtitle={customer ? `العميل: ${customer.name}` : ''}
-            rightContent={
-              <div className="bg-white/20 px-4 py-2 rounded">
-                <p className="text-sm text-blue-100">التاريخ</p>
-                <p className="text-base font-semibold">
-                  {format(new Date(), "dd/MM/yyyy", { locale: ar })}
-                </p>
-              </div>
-            }
+            date={new Date()}
           />
 
           {/* Customer Info */}
@@ -681,6 +675,69 @@ export default function CustomerStatementPage() {
           <InvoiceFooter />
         </div>
       </div>
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          /* Hide everything first */
+          body > * {
+            display: none !important;
+          }
+
+          /* Show only the main container */
+          body > #__next {
+            display: block !important;
+          }
+
+          #__next > * {
+            display: none !important;
+          }
+
+          /* Find and show the statement area */
+          #statement-print-area {
+            display: block !important;
+            position: relative !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 10mm !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+
+          #statement-print-area,
+          #statement-print-area * {
+            visibility: visible !important;
+          }
+
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          img {
+            max-width: 100% !important;
+            display: block !important;
+          }
+
+          @page {
+            size: A4;
+            margin: 5mm;
+          }
+        }
+      `}</style>
     </div>
   );
 }

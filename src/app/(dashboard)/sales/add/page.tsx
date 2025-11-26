@@ -26,6 +26,8 @@ import { InvoiceType, InvoiceItem } from "@/features/sales/types";
 
 interface GroupedProduct {
   productName: string;
+  purchasedQuantity: number;
+  soldQuantity: number;
   totalAvailableQuantity: number;
   unitPrice: number;
   purchases: Array<{ id: string; quantity: number; unitSellingPrice: number }>;
@@ -34,7 +36,7 @@ interface GroupedProduct {
 export default function AddSalePage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { createSale, customers, isLoading } = useSalesStore();
+  const { createSale, customers, sales, isLoading } = useSalesStore();
   const { purchases } = usePurchasesStore();
 
   // Form State
@@ -60,14 +62,15 @@ export default function AddSalePage() {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Group products by name and calculate available quantities
+  // Group products by name and calculate available quantities (purchases - sales)
   const groupedProducts = useMemo<GroupedProduct[]>(() => {
     const groups = new Map<string, GroupedProduct>();
 
+    // Add purchased quantities
     purchases.forEach((purchase) => {
       const existing = groups.get(purchase.productName);
       if (existing) {
-        existing.totalAvailableQuantity += purchase.quantity;
+        existing.purchasedQuantity += purchase.quantity;
         existing.purchases.push({
           id: purchase.id,
           quantity: purchase.quantity,
@@ -76,6 +79,8 @@ export default function AddSalePage() {
       } else {
         groups.set(purchase.productName, {
           productName: purchase.productName,
+          purchasedQuantity: purchase.quantity,
+          soldQuantity: 0,
           totalAvailableQuantity: purchase.quantity,
           unitPrice: purchase.unitSellingPrice,
           purchases: [
@@ -89,10 +94,27 @@ export default function AddSalePage() {
       }
     });
 
-    return Array.from(groups.values()).sort((a, b) =>
-      a.productName.localeCompare(b.productName, "ar")
-    );
-  }, [purchases]);
+    // Subtract sold quantities (exclude payment invoices)
+    sales
+      .filter((sale) => sale.invoiceType !== "payment")
+      .forEach((sale) => {
+        sale.items.forEach((item) => {
+          const existing = groups.get(item.productName);
+          if (existing) {
+            existing.soldQuantity += item.quantity;
+          }
+        });
+      });
+
+    // Calculate available quantity
+    groups.forEach((product) => {
+      product.totalAvailableQuantity = product.purchasedQuantity - product.soldQuantity;
+    });
+
+    return Array.from(groups.values())
+      .filter((product) => product.totalAvailableQuantity > 0) // Only show products with available stock
+      .sort((a, b) => a.productName.localeCompare(b.productName, "ar"));
+  }, [purchases, sales]);
 
   // Filter products based on search
   const filteredProducts = useMemo(() => {
@@ -177,6 +199,23 @@ export default function AddSalePage() {
             ...item,
             quantity: newQuantity,
             totalPrice: newQuantity * item.unitPrice,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  // Handle item unit price change
+  const handleItemPriceChange = (productName: string, newPrice: number) => {
+    setSelectedItems(
+      selectedItems.map((item) => {
+        if (item.productName === productName) {
+          const price = Math.max(0, newPrice);
+          return {
+            ...item,
+            unitPrice: price,
+            totalPrice: item.quantity * price,
           };
         }
         return item;
@@ -455,7 +494,19 @@ export default function AddSalePage() {
                         <tr key={item.productName}>
                           <td className="px-4 py-2 text-right">{item.productName}</td>
                           <td className="px-4 py-2 text-center">
-                            {item.unitPrice.toFixed(2)} ج.م
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) =>
+                                handleItemPriceChange(
+                                  item.productName,
+                                  Number(e.target.value)
+                                )
+                              }
+                              className="w-24 text-center mx-auto"
+                            />
                           </td>
                           <td className="px-4 py-2 text-center">
                             <Input

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -127,18 +127,65 @@ const sidebarItems: SidebarItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(
     // Auto-expand if on a reports page
     pathname.startsWith("/reports") ? "/reports" : null
   );
+
+  // Load collapsed state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+      setIsCollapsed(saved === "true");
+    }
+  }, []);
+
+  // Save collapsed state to localStorage
+  const toggleCollapse = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem("sidebar-collapsed", String(newState));
+  };
 
   const toggleExpand = (href: string) => {
     setExpandedItem(expandedItem === href ? null : href);
   };
 
   return (
-    <aside className="w-64 bg-white border-l border-slate-200 h-[calc(100vh-64px)] sticky top-[64px]">
-      <nav className="p-4 space-y-2">
+    <aside
+      className={cn(
+        "bg-white border-l border-slate-200 h-[calc(100vh-64px)] sticky top-[64px] transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Toggle Button */}
+      <div className="p-2 border-b border-slate-200">
+        <button
+          onClick={toggleCollapse}
+          className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 transition-colors"
+          title={isCollapsed ? "توسيع القائمة" : "تصغير القائمة"}
+        >
+          <svg
+            className={cn(
+              "w-5 h-5 text-slate-600 transition-transform duration-300",
+              isCollapsed ? "rotate-180" : ""
+            )}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <nav className="p-2 space-y-1">
         {sidebarItems.map((item) => {
           const isActive = pathname === item.href;
           const isExpanded = expandedItem === item.href;
@@ -150,36 +197,40 @@ export function Sidebar() {
               {hasSubItems ? (
                 <>
                   <button
-                    onClick={() => toggleExpand(item.href)}
+                    onClick={() => !isCollapsed && toggleExpand(item.href)}
                     className={cn(
-                      "w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors",
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
                       isActive || isSubItemActive
                         ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
+                        : "text-slate-700 hover:bg-slate-100",
+                      isCollapsed ? "justify-center" : "justify-between"
                     )}
+                    title={isCollapsed ? item.title : undefined}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
                       {item.icon}
-                      <span className="font-medium">{item.title}</span>
+                      {!isCollapsed && <span className="font-medium">{item.title}</span>}
                     </div>
-                    <svg
-                      className={cn(
-                        "w-4 h-4 transition-transform",
-                        isExpanded ? "rotate-180" : ""
-                      )}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                    {!isCollapsed && (
+                      <svg
+                        className={cn(
+                          "w-4 h-4 transition-transform",
+                          isExpanded ? "rotate-180" : ""
+                        )}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    )}
                   </button>
-                  {isExpanded && (
+                  {!isCollapsed && isExpanded && (
                     <div className="mt-1 mr-4 space-y-1">
                       {item.subItems?.map((subItem) => {
                         const isSubActive = pathname.startsWith(subItem.href);
@@ -205,14 +256,16 @@ export function Sidebar() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                    "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
                     isActive
                       ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100"
+                      : "text-slate-700 hover:bg-slate-100",
+                    isCollapsed && "justify-center"
                   )}
+                  title={isCollapsed ? item.title : undefined}
                 >
                   {item.icon}
-                  <span className="font-medium">{item.title}</span>
+                  {!isCollapsed && <span className="font-medium">{item.title}</span>}
                 </Link>
               )}
             </div>

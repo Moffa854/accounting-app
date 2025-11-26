@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useSettingsStore } from "@/features/settings/store/settings-store";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useEffect } from "react";
-import { Phone } from "lucide-react";
 
 export function InvoiceFooter() {
   const { user } = useAuthStore();
@@ -16,48 +15,25 @@ export function InvoiceFooter() {
     }
   }, [user, companySettings, fetchCompanySettings]);
 
-  // Don't show footer if no company settings
-  if (!companySettings || (!companySettings.whatsappQRCode && !companySettings.companyPhone)) {
+  // Don't show footer if no WhatsApp QR
+  if (!companySettings?.whatsappQRCode) {
     return null;
   }
 
   return (
-    <div className="border-t-2 border-slate-200 mt-6 pt-4">
-      <div className="flex justify-between items-center">
-        {/* Left Side - WhatsApp QR Code */}
-        <div className="flex-1 flex justify-start">
-          {companySettings.whatsappQRCode && (
-            <div className="text-center">
-              <div className="bg-white p-2 rounded-lg border-2 border-slate-300 inline-block">
-                <div className="relative w-24 h-24">
-                  <Image
-                    src={companySettings.whatsappQRCode}
-                    alt="رمز QR للواتساب"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-slate-600 mt-2 font-medium">تواصل معنا عبر واتساب</p>
-            </div>
-          )}
-        </div>
-
-        {/* Right Side - Phone Number */}
-        <div className="flex-1 flex justify-end">
-          {companySettings.companyPhone && (
-            <div className="text-left">
-              <div className="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-lg border border-slate-200">
-                <Phone className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-xs text-slate-600">للتواصل</p>
-                  <p className="text-lg font-bold text-slate-900 dir-ltr">
-                    {companySettings.companyPhone}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+    <div className="border-t-2 border-slate-200 mt-6 pt-6">
+      {/* Center - WhatsApp QR Code */}
+      <div className="flex flex-col items-center justify-center">
+        <p className="text-sm text-slate-600 font-medium mb-3">تواصل معنا عبر واتساب</p>
+        <div className="bg-white p-3 rounded-xl border-2 border-slate-300 shadow-sm">
+          <div className="relative w-32 h-32">
+            <Image
+              src={companySettings.whatsappQRCode}
+              alt="رمز QR للواتساب"
+              fill
+              className="object-contain"
+            />
+          </div>
         </div>
       </div>
 
