@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { Supplier, SupplierPayment } from "../types";
 import { suppliersService } from "../services/suppliers-service";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
+
+// Helper to get current tenant ID
+const getTenantId = () => useTenantsStore.getState().currentTenant?.id;
 
 interface SuppliersState {
   suppliers: Supplier[];
@@ -24,7 +28,8 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
   fetchSuppliers: async (userId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const suppliers = await suppliersService.fetchSuppliers(userId);
+      const tenantId = getTenantId();
+      const suppliers = await suppliersService.fetchSuppliers(userId, tenantId);
       set({ suppliers, isLoading: false });
     } catch (error) {
       set({
@@ -37,7 +42,8 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
   createSupplier: async (supplierData: Omit<Supplier, "id">) => {
     set({ isLoading: true, error: null });
     try {
-      const supplierId = await suppliersService.createSupplier(supplierData);
+      const tenantId = getTenantId();
+      const supplierId = await suppliersService.createSupplier(supplierData, tenantId);
       // Refresh suppliers list
       await get().fetchSuppliers(supplierData.userId);
       set({ isLoading: false });
@@ -53,7 +59,8 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
 
   updateSupplierBalance: async (supplierId: string, newBalance: number) => {
     try {
-      await suppliersService.updateSupplierBalance(supplierId, newBalance);
+      const tenantId = getTenantId();
+      await suppliersService.updateSupplierBalance(supplierId, newBalance, tenantId);
       // Update local state
       set((state) => ({
         suppliers: state.suppliers.map((s) =>
@@ -71,12 +78,13 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
   recordPayment: async (paymentData: Omit<SupplierPayment, "id" | "paymentDate">) => {
     set({ isLoading: true, error: null });
     try {
+      const tenantId = getTenantId();
       // Add paymentDate automatically
       const paymentWithDate = {
         ...paymentData,
         paymentDate: new Date(),
       };
-      await suppliersService.recordPayment(paymentWithDate);
+      await suppliersService.recordPayment(paymentWithDate, tenantId);
       // Update supplier balance
       await get().updateSupplierBalance(
         paymentData.supplierId,
@@ -95,7 +103,8 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
   fetchSupplierPayments: async (supplierId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const payments = await suppliersService.fetchSupplierPayments(supplierId);
+      const tenantId = getTenantId();
+      const payments = await suppliersService.fetchSupplierPayments(supplierId, tenantId);
       set({ payments, isLoading: false });
     } catch (error) {
       set({
@@ -108,7 +117,8 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
   fetchAllPayments: async (userId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const payments = await suppliersService.fetchAllPayments(userId);
+      const tenantId = getTenantId();
+      const payments = await suppliersService.fetchAllPayments(userId, tenantId);
       set({ payments, isLoading: false });
     } catch (error) {
       set({

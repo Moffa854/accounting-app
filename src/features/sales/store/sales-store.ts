@@ -7,6 +7,10 @@ import {
   customersService,
   receiptsService,
 } from "../services/sales-service";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
+
+// Helper to get current tenant ID
+const getTenantId = () => useTenantsStore.getState().currentTenant?.id;
 
 interface SalesStore extends SalesState {
   // Sales Actions
@@ -56,7 +60,8 @@ export const useSalesStore = create<SalesStore>()(
       fetchSales: async (userId: string) => {
         set({ isLoading: true, error: null });
         try {
-          const sales = await salesService.fetchSales(userId);
+          const tenantId = getTenantId();
+          const sales = await salesService.fetchSales(userId, tenantId);
           set({ sales, isLoading: false });
         } catch (error: any) {
           set({ error: error.message, isLoading: false });
@@ -70,6 +75,7 @@ export const useSalesStore = create<SalesStore>()(
       createSale: async (saleData: SaleFormData, userId: string) => {
         set({ isLoading: true, error: null });
         try {
+          const tenantId = getTenantId();
           // 1. Create or update customer
           let customerId = saleData.customerId;
 
@@ -78,7 +84,8 @@ export const useSalesStore = create<SalesStore>()(
             const existingCustomer = await customersService.getCustomerByNameAndPhone(
               saleData.customerName,
               saleData.customerPhone,
-              userId
+              userId,
+              tenantId
             );
 
             if (existingCustomer) {
@@ -86,7 +93,8 @@ export const useSalesStore = create<SalesStore>()(
               // Update existing customer balance
               await customersService.updateCustomerBalance(
                 customerId,
-                saleData.currentBalance
+                saleData.currentBalance,
+                tenantId
               );
             } else {
               // Create new customer
@@ -96,21 +104,25 @@ export const useSalesStore = create<SalesStore>()(
                   phone: saleData.customerPhone,
                   totalBalance: saleData.currentBalance,
                 },
-                userId
+                userId,
+                undefined,
+                tenantId
               );
             }
           } else {
             // Update existing customer balance
             await customersService.updateCustomerBalance(
               customerId,
-              saleData.currentBalance
+              saleData.currentBalance,
+              tenantId
             );
           }
 
           // 2. Create sale with customerId
           const saleId = await salesService.createSale(
             { ...saleData, customerId },
-            userId
+            userId,
+            tenantId
           );
 
           // 3. Refresh sales and customers
@@ -132,7 +144,8 @@ export const useSalesStore = create<SalesStore>()(
       updateSale: async (saleId: string, saleData: Partial<SaleFormData>) => {
         set({ isLoading: true, error: null });
         try {
-          await salesService.updateSale(saleId, saleData);
+          const tenantId = getTenantId();
+          await salesService.updateSale(saleId, saleData, tenantId);
 
           // Update local state
           const sales = get().sales.map((sale) =>
@@ -151,6 +164,7 @@ export const useSalesStore = create<SalesStore>()(
       deleteSale: async (saleId: string) => {
         set({ isLoading: true, error: null });
         try {
+          const tenantId = getTenantId();
           // Find the sale to get customer info before deleting
           const sale = get().sales.find((s) => s.id === saleId);
 
@@ -161,7 +175,7 @@ export const useSalesStore = create<SalesStore>()(
             if (customer) {
               // Reduce customer balance by the current balance from this sale
               const newBalance = customer.totalBalance - sale.currentBalance;
-              await customersService.updateCustomerBalance(sale.customerId, newBalance);
+              await customersService.updateCustomerBalance(sale.customerId, newBalance, tenantId);
 
               // Update customers in local state
               const customers = get().customers.map((c) =>
@@ -174,7 +188,7 @@ export const useSalesStore = create<SalesStore>()(
           }
 
           // Delete the sale from Firebase
-          await salesService.deleteSale(saleId);
+          await salesService.deleteSale(saleId, tenantId);
 
           // Update local state
           const sales = get().sales.filter((s) => s.id !== saleId);
@@ -193,7 +207,8 @@ export const useSalesStore = create<SalesStore>()(
       fetchCustomers: async (userId: string) => {
         set({ isLoading: true, error: null });
         try {
-          const customers = await customersService.fetchCustomers(userId);
+          const tenantId = getTenantId();
+          const customers = await customersService.fetchCustomers(userId, tenantId);
           set({ customers, isLoading: false });
         } catch (error: any) {
           set({ error: error.message, isLoading: false });
@@ -210,10 +225,12 @@ export const useSalesStore = create<SalesStore>()(
         userId: string
       ) => {
         try {
+          const tenantId = getTenantId();
           return await customersService.getCustomerByNameAndPhone(
             name,
             phone,
-            userId
+            userId,
+            tenantId
           );
         } catch (error: any) {
           console.error("Error getting customer:", error);
@@ -226,7 +243,8 @@ export const useSalesStore = create<SalesStore>()(
        */
       updateCustomerBalance: async (customerId: string, newBalance: number) => {
         try {
-          await customersService.updateCustomerBalance(customerId, newBalance);
+          const tenantId = getTenantId();
+          await customersService.updateCustomerBalance(customerId, newBalance, tenantId);
 
           // Update local state
           const customers = get().customers.map((customer) =>
@@ -246,6 +264,7 @@ export const useSalesStore = create<SalesStore>()(
        */
       addPaymentToCustomer: async (customerId: string, paymentAmount: number) => {
         try {
+          const tenantId = getTenantId();
           const customer = get().customers.find((c) => c.id === customerId);
           if (!customer) {
             throw new Error("العميل غير موجود");
@@ -286,14 +305,14 @@ export const useSalesStore = create<SalesStore>()(
           const userId = customer.userId;
 
           // Create the payment invoice in Firebase
-          await salesService.createSale(paymentInvoice, userId);
+          await salesService.createSale(paymentInvoice, userId, tenantId);
 
           // Update customer balance
           const newBalance = customer.totalBalance - paymentAmount;
-          await customersService.updateCustomerBalance(customerId, newBalance);
+          await customersService.updateCustomerBalance(customerId, newBalance, tenantId);
 
           // Refresh sales to get the new invoice
-          const updatedSales = await salesService.fetchSales(userId);
+          const updatedSales = await salesService.fetchSales(userId, tenantId);
 
           // Update local state
           const customers = get().customers.map((c) =>
@@ -312,16 +331,17 @@ export const useSalesStore = create<SalesStore>()(
       deleteCustomer: async (customerId: string, userId: string) => {
         set({ isLoading: true, error: null });
         try {
+          const tenantId = getTenantId();
           // Find all sales for this customer
           const customerSales = get().sales.filter((s) => s.customerId === customerId);
 
           // Delete all customer invoices first
           for (const sale of customerSales) {
-            await salesService.deleteSale(sale.id);
+            await salesService.deleteSale(sale.id, tenantId);
           }
 
           // Delete the customer from Firebase
-          await customersService.deleteCustomer(customerId);
+          await customersService.deleteCustomer(customerId, tenantId);
 
           // Update local state - remove customer and their sales
           const customers = get().customers.filter((c) => c.id !== customerId);
@@ -342,7 +362,8 @@ export const useSalesStore = create<SalesStore>()(
       fetchCustomerReceipts: async (customerId: string) => {
         set({ isLoading: true, error: null });
         try {
-          const receipts = await receiptsService.fetchCustomerReceipts(customerId);
+          const tenantId = getTenantId();
+          const receipts = await receiptsService.fetchCustomerReceipts(customerId, tenantId);
           set({ receipts, isLoading: false });
         } catch (error: any) {
           set({ error: error.message, isLoading: false });
@@ -356,7 +377,8 @@ export const useSalesStore = create<SalesStore>()(
       fetchAllReceipts: async (userId: string) => {
         set({ isLoading: true, error: null });
         try {
-          const receipts = await receiptsService.fetchAllReceipts(userId);
+          const tenantId = getTenantId();
+          const receipts = await receiptsService.fetchAllReceipts(userId, tenantId);
           set({ receipts, isLoading: false });
         } catch (error: any) {
           set({ error: error.message, isLoading: false });
@@ -373,13 +395,15 @@ export const useSalesStore = create<SalesStore>()(
       ) => {
         set({ isLoading: true, error: null });
         try {
+          const tenantId = getTenantId();
           // 1. Create the receipt
-          await receiptsService.createReceipt(receiptData);
+          await receiptsService.createReceipt(receiptData, tenantId);
 
           // 2. Update customer balance (reduce by payment amount)
           await customersService.updateCustomerBalance(
             receiptData.customerId,
-            receiptData.currentBalance
+            receiptData.currentBalance,
+            tenantId
           );
 
           // 3. Refresh receipts and customers
@@ -404,7 +428,8 @@ export const useSalesStore = create<SalesStore>()(
       ) => {
         set({ isLoading: true, error: null });
         try {
-          await receiptsService.updateReceipt(receiptId, receiptData);
+          const tenantId = getTenantId();
+          await receiptsService.updateReceipt(receiptId, receiptData, tenantId);
 
           // Update local state
           const receipts = get().receipts.map((receipt) =>
@@ -423,6 +448,7 @@ export const useSalesStore = create<SalesStore>()(
       deleteReceipt: async (receiptId: string, customerId: string, userId: string) => {
         set({ isLoading: true, error: null });
         try {
+          const tenantId = getTenantId();
           // Find the receipt to get payment amount
           const receipt = get().receipts.find((r) => r.id === receiptId);
 
@@ -433,7 +459,7 @@ export const useSalesStore = create<SalesStore>()(
             if (customer) {
               // Restore customer balance by adding back the payment amount
               const newBalance = customer.totalBalance + receipt.paidAmount;
-              await customersService.updateCustomerBalance(customerId, newBalance);
+              await customersService.updateCustomerBalance(customerId, newBalance, tenantId);
 
               // Update customers in local state
               const customers = get().customers.map((c) =>
@@ -444,7 +470,7 @@ export const useSalesStore = create<SalesStore>()(
           }
 
           // Delete the receipt from Firebase
-          await receiptsService.deleteReceipt(receiptId);
+          await receiptsService.deleteReceipt(receiptId, tenantId);
 
           // Update local state - remove receipt
           const receipts = get().receipts.filter((r) => r.id !== receiptId);
@@ -460,7 +486,8 @@ export const useSalesStore = create<SalesStore>()(
        */
       generateReceiptNumber: async (userId: string) => {
         try {
-          return await receiptsService.generateReceiptNumber(userId);
+          const tenantId = getTenantId();
+          return await receiptsService.generateReceiptNumber(userId, tenantId);
         } catch (error: any) {
           console.error("Error generating receipt number:", error);
           return `REC-${Date.now()}`;

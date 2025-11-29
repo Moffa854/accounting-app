@@ -14,9 +14,13 @@ import {
 import { db } from "@/lib/firebase/config";
 import { Sale, SaleFormData, Customer, CustomerReceipt } from "../types";
 
-const SALES_COLLECTION = "sales";
-const CUSTOMERS_COLLECTION = "customers";
-const RECEIPTS_COLLECTION = "customer_receipts";
+// Helper functions for collection paths
+const getSalesPath = (tenantId?: string) =>
+  tenantId ? `tenants/${tenantId}/sales` : "sales";
+const getCustomersPath = (tenantId?: string) =>
+  tenantId ? `tenants/${tenantId}/customers` : "customers";
+const getReceiptsPath = (tenantId?: string) =>
+  tenantId ? `tenants/${tenantId}/customer_receipts` : "customer_receipts";
 
 // ============= Sales Operations =============
 
@@ -26,19 +30,22 @@ export const salesService = {
    */
   async createSale(
     saleData: SaleFormData,
-    userId: string
+    userId: string,
+    tenantId?: string
   ): Promise<string> {
     try {
       const now = Timestamp.now();
+      const collectionPath = getSalesPath(tenantId);
 
       const docData = {
         ...saleData,
         userId,
+        tenantId: tenantId || null,
         createdAt: now,
         updatedAt: now,
       };
 
-      const docRef = await addDoc(collection(db, SALES_COLLECTION), docData);
+      const docRef = await addDoc(collection(db, collectionPath), docData);
       return docRef.id;
     } catch (error) {
       console.error("Error creating sale:", error);
@@ -49,10 +56,11 @@ export const salesService = {
   /**
    * Fetch all sales for a specific user
    */
-  async fetchSales(userId: string): Promise<Sale[]> {
+  async fetchSales(userId: string, tenantId?: string): Promise<Sale[]> {
     try {
+      const collectionPath = getSalesPath(tenantId);
       const q = query(
-        collection(db, SALES_COLLECTION),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         orderBy("createdAt", "desc")
       );
@@ -79,10 +87,12 @@ export const salesService = {
    */
   async updateSale(
     saleId: string,
-    saleData: Partial<SaleFormData>
+    saleData: Partial<SaleFormData>,
+    tenantId?: string
   ): Promise<void> {
     try {
-      const saleRef = doc(db, SALES_COLLECTION, saleId);
+      const collectionPath = getSalesPath(tenantId);
+      const saleRef = doc(db, collectionPath, saleId);
       await updateDoc(saleRef, {
         ...saleData,
         updatedAt: Timestamp.now(),
@@ -96,9 +106,10 @@ export const salesService = {
   /**
    * Delete a sale
    */
-  async deleteSale(saleId: string): Promise<void> {
+  async deleteSale(saleId: string, tenantId?: string): Promise<void> {
     try {
-      const saleRef = doc(db, SALES_COLLECTION, saleId);
+      const collectionPath = getSalesPath(tenantId);
+      const saleRef = doc(db, collectionPath, saleId);
       await deleteDoc(saleRef);
     } catch (error) {
       console.error("Error deleting sale:", error);
@@ -120,14 +131,16 @@ export const customersService = {
       totalBalance: number;
     },
     userId: string,
-    customerId?: string
+    customerId?: string,
+    tenantId?: string
   ): Promise<string> {
     try {
       const now = Timestamp.now();
+      const collectionPath = getCustomersPath(tenantId);
 
       // If customerId is provided, update existing customer
       if (customerId) {
-        const customerRef = doc(db, CUSTOMERS_COLLECTION, customerId);
+        const customerRef = doc(db, collectionPath, customerId);
         await updateDoc(customerRef, {
           ...customerData,
           updatedAt: now,
@@ -139,14 +152,12 @@ export const customersService = {
       const docData = {
         ...customerData,
         userId,
+        tenantId: tenantId || null,
         createdAt: now,
         updatedAt: now,
       };
 
-      const docRef = await addDoc(
-        collection(db, CUSTOMERS_COLLECTION),
-        docData
-      );
+      const docRef = await addDoc(collection(db, collectionPath), docData);
       return docRef.id;
     } catch (error) {
       console.error("Error upserting customer:", error);
@@ -157,10 +168,11 @@ export const customersService = {
   /**
    * Fetch all customers for a specific user
    */
-  async fetchCustomers(userId: string): Promise<Customer[]> {
+  async fetchCustomers(userId: string, tenantId?: string): Promise<Customer[]> {
     try {
+      const collectionPath = getCustomersPath(tenantId);
       const q = query(
-        collection(db, CUSTOMERS_COLLECTION),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         orderBy("name", "asc")
       );
@@ -188,11 +200,13 @@ export const customersService = {
   async getCustomerByNameAndPhone(
     name: string,
     phone: string,
-    userId: string
+    userId: string,
+    tenantId?: string
   ): Promise<Customer | null> {
     try {
+      const collectionPath = getCustomersPath(tenantId);
       const q = query(
-        collection(db, CUSTOMERS_COLLECTION),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         where("name", "==", name),
         where("phone", "==", phone)
@@ -204,11 +218,11 @@ export const customersService = {
         return null;
       }
 
-      const doc = querySnapshot.docs[0];
-      const data = doc.data();
+      const docSnap = querySnapshot.docs[0];
+      const data = docSnap.data();
 
       return {
-        id: doc.id,
+        id: docSnap.id,
         ...data,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -224,10 +238,12 @@ export const customersService = {
    */
   async updateCustomerBalance(
     customerId: string,
-    newBalance: number
+    newBalance: number,
+    tenantId?: string
   ): Promise<void> {
     try {
-      const customerRef = doc(db, CUSTOMERS_COLLECTION, customerId);
+      const collectionPath = getCustomersPath(tenantId);
+      const customerRef = doc(db, collectionPath, customerId);
       await updateDoc(customerRef, {
         totalBalance: newBalance,
         updatedAt: Timestamp.now(),
@@ -241,9 +257,10 @@ export const customersService = {
   /**
    * Delete a customer
    */
-  async deleteCustomer(customerId: string): Promise<void> {
+  async deleteCustomer(customerId: string, tenantId?: string): Promise<void> {
     try {
-      const customerRef = doc(db, CUSTOMERS_COLLECTION, customerId);
+      const collectionPath = getCustomersPath(tenantId);
+      const customerRef = doc(db, collectionPath, customerId);
       await deleteDoc(customerRef);
     } catch (error) {
       console.error("Error deleting customer:", error);
@@ -258,10 +275,11 @@ export const receiptsService = {
   /**
    * Generate unique receipt number
    */
-  async generateReceiptNumber(userId: string): Promise<string> {
+  async generateReceiptNumber(userId: string, tenantId?: string): Promise<string> {
     try {
+      const collectionPath = getReceiptsPath(tenantId);
       const q = query(
-        collection(db, RECEIPTS_COLLECTION),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         orderBy("createdAt", "desc")
       );
@@ -286,19 +304,22 @@ export const receiptsService = {
    * Create a new customer receipt
    */
   async createReceipt(
-    receiptData: Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">
+    receiptData: Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">,
+    tenantId?: string
   ): Promise<string> {
     try {
       const now = Timestamp.now();
+      const collectionPath = getReceiptsPath(tenantId);
 
       const docData = {
         ...receiptData,
+        tenantId: tenantId || null,
         receiptDate: Timestamp.fromDate(receiptData.receiptDate),
         createdAt: now,
         updatedAt: now,
       };
 
-      const docRef = await addDoc(collection(db, RECEIPTS_COLLECTION), docData);
+      const docRef = await addDoc(collection(db, collectionPath), docData);
       return docRef.id;
     } catch (error) {
       console.error("Error creating receipt:", error);
@@ -309,10 +330,14 @@ export const receiptsService = {
   /**
    * Fetch all receipts for a specific customer
    */
-  async fetchCustomerReceipts(customerId: string): Promise<CustomerReceipt[]> {
+  async fetchCustomerReceipts(
+    customerId: string,
+    tenantId?: string
+  ): Promise<CustomerReceipt[]> {
     try {
+      const collectionPath = getReceiptsPath(tenantId);
       const q = query(
-        collection(db, RECEIPTS_COLLECTION),
+        collection(db, collectionPath),
         where("customerId", "==", customerId),
         orderBy("receiptDate", "desc")
       );
@@ -338,10 +363,11 @@ export const receiptsService = {
   /**
    * Fetch all receipts for a specific user
    */
-  async fetchAllReceipts(userId: string): Promise<CustomerReceipt[]> {
+  async fetchAllReceipts(userId: string, tenantId?: string): Promise<CustomerReceipt[]> {
     try {
+      const collectionPath = getReceiptsPath(tenantId);
       const q = query(
-        collection(db, RECEIPTS_COLLECTION),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         orderBy("receiptDate", "desc")
       );
@@ -369,11 +395,13 @@ export const receiptsService = {
    */
   async updateReceipt(
     receiptId: string,
-    receiptData: Partial<Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">>
+    receiptData: Partial<Omit<CustomerReceipt, "id" | "createdAt" | "updatedAt">>,
+    tenantId?: string
   ): Promise<void> {
     try {
-      const receiptRef = doc(db, RECEIPTS_COLLECTION, receiptId);
-      const updateData: any = {
+      const collectionPath = getReceiptsPath(tenantId);
+      const receiptRef = doc(db, collectionPath, receiptId);
+      const updateData: Record<string, unknown> = {
         ...receiptData,
         updatedAt: Timestamp.now(),
       };
@@ -392,9 +420,10 @@ export const receiptsService = {
   /**
    * Delete a receipt
    */
-  async deleteReceipt(receiptId: string): Promise<void> {
+  async deleteReceipt(receiptId: string, tenantId?: string): Promise<void> {
     try {
-      const receiptRef = doc(db, RECEIPTS_COLLECTION, receiptId);
+      const collectionPath = getReceiptsPath(tenantId);
+      const receiptRef = doc(db, collectionPath, receiptId);
       await deleteDoc(receiptRef);
     } catch (error) {
       console.error("Error deleting receipt:", error);

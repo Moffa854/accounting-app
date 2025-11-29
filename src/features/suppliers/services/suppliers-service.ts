@@ -12,12 +12,19 @@ import {
 import { db } from "@/lib/firebase/config";
 import { Supplier, SupplierPayment } from "../types";
 
+// Helper functions for collection paths
+const getSuppliersPath = (tenantId?: string) =>
+  tenantId ? `tenants/${tenantId}/suppliers` : "suppliers";
+const getPaymentsPath = (tenantId?: string) =>
+  tenantId ? `tenants/${tenantId}/supplierPayments` : "supplierPayments";
+
 export const suppliersService = {
   // Fetch all suppliers for a user
-  async fetchSuppliers(userId: string): Promise<Supplier[]> {
+  async fetchSuppliers(userId: string, tenantId?: string): Promise<Supplier[]> {
     try {
+      const collectionPath = getSuppliersPath(tenantId);
       const q = query(
-        collection(db, "suppliers"),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         orderBy("createdAt", "desc")
       );
@@ -35,10 +42,15 @@ export const suppliersService = {
   },
 
   // Create a new supplier
-  async createSupplier(supplierData: Omit<Supplier, "id">): Promise<string> {
+  async createSupplier(
+    supplierData: Omit<Supplier, "id">,
+    tenantId?: string
+  ): Promise<string> {
     try {
-      const docRef = await addDoc(collection(db, "suppliers"), {
+      const collectionPath = getSuppliersPath(tenantId);
+      const docRef = await addDoc(collection(db, collectionPath), {
         ...supplierData,
+        tenantId: tenantId || null,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
@@ -52,10 +64,12 @@ export const suppliersService = {
   // Update supplier balance
   async updateSupplierBalance(
     supplierId: string,
-    newBalance: number
+    newBalance: number,
+    tenantId?: string
   ): Promise<void> {
     try {
-      const supplierRef = doc(db, "suppliers", supplierId);
+      const collectionPath = getSuppliersPath(tenantId);
+      const supplierRef = doc(db, collectionPath, supplierId);
       await updateDoc(supplierRef, {
         totalBalance: newBalance,
         updatedAt: Timestamp.now(),
@@ -68,11 +82,14 @@ export const suppliersService = {
 
   // Record a payment to supplier
   async recordPayment(
-    paymentData: Omit<SupplierPayment, "id">
+    paymentData: Omit<SupplierPayment, "id">,
+    tenantId?: string
   ): Promise<string> {
     try {
-      const docRef = await addDoc(collection(db, "supplierPayments"), {
+      const collectionPath = getPaymentsPath(tenantId);
+      const docRef = await addDoc(collection(db, collectionPath), {
         ...paymentData,
+        tenantId: tenantId || null,
         paymentDate: Timestamp.now(),
       });
       return docRef.id;
@@ -84,11 +101,13 @@ export const suppliersService = {
 
   // Fetch all payments for a supplier
   async fetchSupplierPayments(
-    supplierId: string
+    supplierId: string,
+    tenantId?: string
   ): Promise<SupplierPayment[]> {
     try {
+      const collectionPath = getPaymentsPath(tenantId);
       const q = query(
-        collection(db, "supplierPayments"),
+        collection(db, collectionPath),
         where("supplierId", "==", supplierId),
         orderBy("paymentDate", "desc")
       );
@@ -105,10 +124,14 @@ export const suppliersService = {
   },
 
   // Fetch all payments for a user (for reports)
-  async fetchAllPayments(userId: string): Promise<SupplierPayment[]> {
+  async fetchAllPayments(
+    userId: string,
+    tenantId?: string
+  ): Promise<SupplierPayment[]> {
     try {
+      const collectionPath = getPaymentsPath(tenantId);
       const q = query(
-        collection(db, "supplierPayments"),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         orderBy("paymentDate", "desc")
       );

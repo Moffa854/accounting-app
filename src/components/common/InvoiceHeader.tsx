@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useSettingsStore } from "@/features/settings/store/settings-store";
-import { useAuthStore } from "@/features/auth/store/auth-store";
-import { useEffect } from "react";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
@@ -14,14 +12,7 @@ interface InvoiceHeaderProps {
 }
 
 export function InvoiceHeader({ title, subtitle, date }: InvoiceHeaderProps) {
-  const { user } = useAuthStore();
-  const { companySettings, fetchCompanySettings } = useSettingsStore();
-
-  useEffect(() => {
-    if (user && !companySettings) {
-      fetchCompanySettings(user.uid);
-    }
-  }, [user, companySettings, fetchCompanySettings]);
+  const { currentTenant } = useTenantsStore();
 
   const displayDate = date || new Date();
 
@@ -46,18 +37,18 @@ export function InvoiceHeader({ title, subtitle, date }: InvoiceHeaderProps) {
         {/* Left Side - Logo and Company Name */}
         <div className="flex items-center gap-3">
           <div className="flex flex-col items-end text-left">
-            {companySettings?.companyName && (
-              <h2 className="text-lg font-semibold">{companySettings.companyName}</h2>
+            {currentTenant?.name && (
+              <h2 className="text-lg font-semibold">{currentTenant.name}</h2>
             )}
-            {companySettings?.companyPhone && (
-              <p className="text-sm text-blue-100">{companySettings.companyPhone}</p>
+            {currentTenant?.phone && (
+              <p className="text-sm text-blue-100">{currentTenant.phone}</p>
             )}
           </div>
-          {companySettings?.companyLogo && (
+          {currentTenant?.logo && (
             <div className="relative w-20 h-20 shrink-0">
               <Image
-                src={companySettings.companyLogo}
-                alt={companySettings.companyName || "شعار الشركة"}
+                src={currentTenant.logo}
+                alt={currentTenant.name || "شعار الشركة"}
                 fill
                 className="object-contain"
               />

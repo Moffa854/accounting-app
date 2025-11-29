@@ -14,7 +14,11 @@ import {
 import { db } from "@/lib/firebase/firestore";
 import { Purchase, PurchaseFormData } from "../types";
 
-const COLLECTION_NAME = "purchases";
+// Helper to get collection path based on tenant
+const getCollectionPath = (tenantId: string) => `tenants/${tenantId}/purchases`;
+
+// Legacy collection for backwards compatibility
+const LEGACY_COLLECTION = "purchases";
 
 export const purchasesService = {
   /**
@@ -22,12 +26,18 @@ export const purchasesService = {
    */
   async createPurchase(
     purchaseData: PurchaseFormData,
-    userId: string
+    userId: string,
+    tenantId?: string
   ): Promise<string> {
     try {
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+      const collectionPath = tenantId
+        ? getCollectionPath(tenantId)
+        : LEGACY_COLLECTION;
+
+      const docRef = await addDoc(collection(db, collectionPath), {
         ...purchaseData,
         userId,
+        tenantId: tenantId || null,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
@@ -38,15 +48,27 @@ export const purchasesService = {
   },
 
   /**
-   * Fetch all purchases for a user
+   * Fetch all purchases for a user (with optional tenant filter)
    */
-  async fetchPurchases(userId: string): Promise<Purchase[]> {
+  async fetchPurchases(userId: string, tenantId?: string): Promise<Purchase[]> {
     try {
-      const q = query(
-        collection(db, COLLECTION_NAME),
-        where("userId", "==", userId),
-        orderBy("createdAt", "desc")
-      );
+      let q;
+
+      if (tenantId) {
+        // New multi-tenant structure
+        q = query(
+          collection(db, getCollectionPath(tenantId)),
+          where("userId", "==", userId),
+          orderBy("createdAt", "desc")
+        );
+      } else {
+        // Legacy structure
+        q = query(
+          collection(db, LEGACY_COLLECTION),
+          where("userId", "==", userId),
+          orderBy("createdAt", "desc")
+        );
+      }
 
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((doc) => {
@@ -55,7 +77,8 @@ export const purchasesService = {
           id: doc.id,
           ...data,
           // Handle old purchases that don't have unitPurchasePrice
-          unitPurchasePrice: data.unitPurchasePrice || (data.purchasePrice / data.quantity) || 0,
+          unitPurchasePrice:
+            data.unitPurchasePrice || data.purchasePrice / data.quantity || 0,
           createdAt: data.createdAt.toDate(),
           updatedAt: data.updatedAt.toDate(),
         } as Purchase;
@@ -70,10 +93,15 @@ export const purchasesService = {
    */
   async updatePurchase(
     purchaseId: string,
-    purchaseData: Partial<PurchaseFormData>
+    purchaseData: Partial<PurchaseFormData>,
+    tenantId?: string
   ): Promise<void> {
     try {
-      const docRef = doc(db, COLLECTION_NAME, purchaseId);
+      const collectionPath = tenantId
+        ? getCollectionPath(tenantId)
+        : LEGACY_COLLECTION;
+
+      const docRef = doc(db, collectionPath, purchaseId);
       await updateDoc(docRef, {
         ...purchaseData,
         updatedAt: Timestamp.now(),
@@ -86,9 +114,13 @@ export const purchasesService = {
   /**
    * Delete a purchase
    */
-  async deletePurchase(purchaseId: string): Promise<void> {
+  async deletePurchase(purchaseId: string, tenantId?: string): Promise<void> {
     try {
-      const docRef = doc(db, COLLECTION_NAME, purchaseId);
+      const collectionPath = tenantId
+        ? getCollectionPath(tenantId)
+        : LEGACY_COLLECTION;
+
+      const docRef = doc(db, collectionPath, purchaseId);
       await deleteDoc(docRef);
     } catch (error: any) {
       throw new Error(error.message || "Failed to delete purchase");
@@ -101,12 +133,17 @@ export const purchasesService = {
   async updateSellingPriceByProductName(
     userId: string,
     productName: string,
-    newUnitSellingPrice: number
+    newUnitSellingPrice: number,
+    tenantId?: string
   ): Promise<void> {
     try {
+      const collectionPath = tenantId
+        ? getCollectionPath(tenantId)
+        : LEGACY_COLLECTION;
+
       // Fetch all purchases for this user with this product name
       const q = query(
-        collection(db, COLLECTION_NAME),
+        collection(db, collectionPath),
         where("userId", "==", userId),
         where("productName", "==", productName)
       );
@@ -119,7 +156,7 @@ export const purchasesService = {
         const quantity = data.quantity || 0;
         const newSellingPrice = newUnitSellingPrice * quantity;
 
-        return updateDoc(doc(db, COLLECTION_NAME, document.id), {
+        return updateDoc(doc(db, collectionPath, document.id), {
           unitSellingPrice: newUnitSellingPrice,
           sellingPrice: newSellingPrice,
           updatedAt: Timestamp.now(),

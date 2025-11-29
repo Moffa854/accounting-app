@@ -2,6 +2,10 @@
 import { create } from "zustand";
 import { purchasesService } from "../services/purchases-service";
 import { Purchase, PurchaseFormData, PurchasesState } from "../types";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
+
+// Helper to get current tenant ID
+const getTenantId = () => useTenantsStore.getState().currentTenant?.id;
 
 interface PurchasesStore extends PurchasesState {
   // Actions
@@ -24,7 +28,8 @@ export const usePurchasesStore = create<PurchasesStore>()((set, get) => ({
   fetchPurchases: async (userId: string) => {
     try {
       set({ isLoading: true, error: null });
-      const purchases = await purchasesService.fetchPurchases(userId);
+      const tenantId = getTenantId();
+      const purchases = await purchasesService.fetchPurchases(userId, tenantId);
       set({ purchases, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -35,7 +40,8 @@ export const usePurchasesStore = create<PurchasesStore>()((set, get) => ({
   createPurchase: async (purchaseData: PurchaseFormData, userId: string) => {
     try {
       set({ isLoading: true, error: null });
-      await purchasesService.createPurchase(purchaseData, userId);
+      const tenantId = getTenantId();
+      await purchasesService.createPurchase(purchaseData, userId, tenantId);
       // Refresh purchases list
       await get().fetchPurchases(userId);
       set({ isLoading: false });
@@ -51,7 +57,8 @@ export const usePurchasesStore = create<PurchasesStore>()((set, get) => ({
   ) => {
     try {
       set({ isLoading: true, error: null });
-      await purchasesService.updatePurchase(purchaseId, purchaseData);
+      const tenantId = getTenantId();
+      await purchasesService.updatePurchase(purchaseId, purchaseData, tenantId);
 
       // Update local state
       const purchases = get().purchases.map((p) =>
@@ -69,7 +76,8 @@ export const usePurchasesStore = create<PurchasesStore>()((set, get) => ({
   deletePurchase: async (purchaseId: string) => {
     try {
       set({ isLoading: true, error: null });
-      await purchasesService.deletePurchase(purchaseId);
+      const tenantId = getTenantId();
+      await purchasesService.deletePurchase(purchaseId, tenantId);
 
       // Remove from local state
       const purchases = get().purchases.filter((p) => p.id !== purchaseId);
@@ -87,10 +95,12 @@ export const usePurchasesStore = create<PurchasesStore>()((set, get) => ({
   ) => {
     try {
       set({ isLoading: true, error: null });
+      const tenantId = getTenantId();
       await purchasesService.updateSellingPriceByProductName(
         userId,
         productName,
-        newUnitSellingPrice
+        newUnitSellingPrice,
+        tenantId
       );
       // Refresh purchases list
       await get().fetchPurchases(userId);

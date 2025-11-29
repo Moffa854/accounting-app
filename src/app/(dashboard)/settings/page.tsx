@@ -3,28 +3,25 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSettingsStore } from "@/features/settings/store/settings-store";
-import { CompanySettingsForm } from "@/features/settings/components/CompanySettingsForm";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
+import { TenantSettingsForm } from "@/features/tenants/components/tenant-settings-form";
 import { ExchangeRatesForm } from "@/features/settings/components/ExchangeRatesForm";
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
+  const { currentTenant, updateTenant, updateTenantSettings } = useTenantsStore();
   const {
     settings,
-    companySettings,
-    isLoading,
     fetchSettings,
     updateExchangeRatesFromApi,
     updateExchangeRatesManual,
-    fetchCompanySettings,
-    updateCompanySettings,
   } = useSettingsStore();
 
   useEffect(() => {
     if (user) {
       fetchSettings(user.uid);
-      fetchCompanySettings(user.uid);
     }
-  }, [user, fetchSettings, fetchCompanySettings]);
+  }, [user, fetchSettings]);
 
   if (!user) {
     return (
@@ -41,11 +38,12 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-8">الإعدادات</h1>
 
       <div className="space-y-8">
-        <CompanySettingsForm
-          companySettings={companySettings}
-          userId={user.uid}
+        <TenantSettingsForm
+          tenant={currentTenant}
           onSave={async (data) => {
-            await updateCompanySettings(user.uid, data);
+            if (currentTenant) {
+              await updateTenant(currentTenant.id, data);
+            }
           }}
         />
 
@@ -54,9 +52,21 @@ export default function SettingsPage() {
           userId={user.uid}
           onAutoUpdate={async () => {
             await updateExchangeRatesFromApi(user.uid);
+            // Also update tenant settings with new rates
+            if (settings?.exchangeRates && currentTenant) {
+              await updateTenantSettings({
+                exchangeRates: settings.exchangeRates,
+              });
+            }
           }}
           onManualUpdate={async (rates) => {
             await updateExchangeRatesManual(user.uid, rates);
+            // Also update tenant settings with new rates
+            if (currentTenant) {
+              await updateTenantSettings({
+                exchangeRates: rates,
+              });
+            }
           }}
         />
       </div>

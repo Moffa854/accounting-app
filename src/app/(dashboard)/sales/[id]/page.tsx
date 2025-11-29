@@ -9,6 +9,8 @@ import { INVOICE_TYPE_LABELS } from "@/features/sales/types";
 import { useReactToPrint } from "react-to-print";
 import { InvoiceHeader } from "@/components/common/InvoiceHeader";
 import { InvoiceFooter } from "@/components/common/InvoiceFooter";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 
 export default function InvoiceDetailsPage() {
   const router = useRouter();
@@ -174,6 +176,16 @@ export default function InvoiceDetailsPage() {
                   >
                     {INVOICE_TYPE_LABELS[sale.invoiceType]}
                   </span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600">الوقت</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {format(
+                      sale.createdAt instanceof Date ? sale.createdAt : new Date(sale.createdAt),
+                      "hh:mm a",
+                      { locale: ar }
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
