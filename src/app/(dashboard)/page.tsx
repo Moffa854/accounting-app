@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 
 export default function DashboardHome() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { sales, fetchSales } = useSalesStore();
   const { purchases, fetchPurchases } = usePurchasesStore();
 
   useEffect(() => {
-    if (user) {
+    // Wait for both user and tenant to be available before fetching data
+    if (user && currentTenant) {
       fetchSales(user.uid);
       fetchPurchases(user.uid);
     }
-  }, [user, fetchSales, fetchPurchases]);
+  }, [user, currentTenant, fetchSales, fetchPurchases]);
 
   // Calculate statistics
   const stats = useMemo(() => {

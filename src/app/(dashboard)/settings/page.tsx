@@ -19,11 +19,11 @@ export default function SettingsPage() {
   } = useSettingsStore();
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchSettings(user.uid);
       fetchCompanySettings(user.uid);
     }
-  }, [user, fetchSettings, fetchCompanySettings]);
+  }, [user, currentTenant, fetchSettings, fetchCompanySettings]);
 
   if (!user) {
     return (

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 
 interface SupplierReport {
   supplierName: string;
@@ -26,16 +27,17 @@ type SearchType = "all" | "name" | "count" | "quantity" | "amount";
 export default function SuppliersReportPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { purchases, isLoading, fetchPurchases, deleteSupplier } = usePurchasesStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<SearchType>("all");
   const [deletingSupplier, setDeletingSupplier] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchPurchases(user.uid);
     }
-  }, [user, fetchPurchases]);
+  }, [user, currentTenant, fetchPurchases]);
 
   // Group purchases by supplier
   const supplierReports = useMemo<SupplierReport[]>(() => {

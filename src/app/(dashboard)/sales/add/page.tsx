@@ -63,13 +63,13 @@ export default function AddSalePage() {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Group products by name AND price to handle same product with different prices
+  // Group products by name AND selling price AND purchase price to handle same product with different prices
   const groupedProducts = useMemo<GroupedProduct[]>(() => {
     const groups = new Map<string, GroupedProduct>();
 
-    // Add purchased quantities - use productName + unitSellingPrice as key
+    // Add purchased quantities - use productName + unitSellingPrice + unitPurchasePrice as key
     purchases.forEach((purchase) => {
-      const groupKey = `${purchase.productName}|${purchase.unitSellingPrice}`;
+      const groupKey = `${purchase.productName}|${purchase.unitSellingPrice}|${purchase.unitPurchasePrice}`;
       const existing = groups.get(groupKey);
       if (existing) {
         existing.purchasedQuantity += purchase.quantity;
@@ -100,14 +100,23 @@ export default function AddSalePage() {
     });
 
     // Subtract sold quantities (exclude payment invoices)
+    // Match by productName + unitPrice, and distribute across matching groups proportionally
     sales
       .filter((sale) => sale.invoiceType !== "payment")
       .forEach((sale) => {
         sale.items.forEach((item) => {
-          const groupKey = `${item.productName}|${item.unitPrice}`;
-          const existing = groups.get(groupKey);
-          if (existing) {
-            existing.soldQuantity += item.quantity;
+          // Find all groups with matching productName and unitPrice
+          const matchingGroups = Array.from(groups.entries()).filter(
+            ([key]) => key.startsWith(`${item.productName}|${item.unitPrice}|`)
+          );
+
+          // Distribute sold quantity across matching groups (FIFO-like approach)
+          let remainingToSubtract = item.quantity;
+          for (const [, group] of matchingGroups) {
+            if (remainingToSubtract <= 0) break;
+            const canSubtract = Math.min(remainingToSubtract, group.purchasedQuantity - group.soldQuantity);
+            group.soldQuantity += canSubtract;
+            remainingToSubtract -= canSubtract;
           }
         });
       });
@@ -175,9 +184,12 @@ export default function AddSalePage() {
 
   // Handle product selection
   const handleSelectProduct = (product: GroupedProduct) => {
-    // Check if product with same name AND price already selected
+    // Check if product with same name AND selling price AND purchase price already selected
     const existingItem = selectedItems.find(
-      (item) => item.productName === product.productName && item.unitPrice === product.unitPrice
+      (item) =>
+        item.productName === product.productName &&
+        item.unitPrice === product.unitPrice &&
+        item.unitPurchasePrice === product.unitPurchasePrice
     );
 
     if (existingItem) {
@@ -191,6 +203,7 @@ export default function AddSalePage() {
       productName: product.productName,
       quantity: 1,
       unitPrice: product.unitPrice,
+      unitPurchasePrice: product.unitPurchasePrice,
       totalPrice: product.unitPrice,
       availableQuantity: product.totalAvailableQuantity,
     };
@@ -200,11 +213,11 @@ export default function AddSalePage() {
     setShowProductSuggestions(false);
   };
 
-  // Handle item quantity change
-  const handleItemQuantityChange = (productName: string, unitPrice: number, quantity: number) => {
+  // Handle item quantity change - use unitPurchasePrice to identify unique items
+  const handleItemQuantityChange = (productName: string, unitPrice: number, unitPurchasePrice: number | undefined, quantity: number) => {
     setSelectedItems(
       selectedItems.map((item) => {
-        if (item.productName === productName && item.unitPrice === unitPrice) {
+        if (item.productName === productName && item.unitPrice === unitPrice && item.unitPurchasePrice === unitPurchasePrice) {
           const newQuantity = Math.max(1, Math.min(quantity, item.availableQuantity));
           return {
             ...item,
@@ -217,11 +230,11 @@ export default function AddSalePage() {
     );
   };
 
-  // Handle item unit price change
-  const handleItemPriceChange = (productName: string, originalPrice: number, newPrice: number) => {
+  // Handle item unit price change - use unitPurchasePrice to identify unique items
+  const handleItemPriceChange = (productName: string, originalPrice: number, unitPurchasePrice: number | undefined, newPrice: number) => {
     setSelectedItems(
       selectedItems.map((item) => {
-        if (item.productName === productName && item.unitPrice === originalPrice) {
+        if (item.productName === productName && item.unitPrice === originalPrice && item.unitPurchasePrice === unitPurchasePrice) {
           const price = Math.max(0, newPrice);
           return {
             ...item,
@@ -234,9 +247,11 @@ export default function AddSalePage() {
     );
   };
 
-  // Handle remove item
-  const handleRemoveItem = (productName: string, unitPrice: number) => {
-    setSelectedItems(selectedItems.filter((item) => !(item.productName === productName && item.unitPrice === unitPrice)));
+  // Handle remove item - use unitPurchasePrice to identify unique items
+  const handleRemoveItem = (productName: string, unitPrice: number, unitPurchasePrice: number | undefined) => {
+    setSelectedItems(selectedItems.filter((item) =>
+      !(item.productName === productName && item.unitPrice === unitPrice && item.unitPurchasePrice === unitPurchasePrice)
+    ));
   };
 
   // Handle form submission
@@ -457,7 +472,7 @@ export default function AddSalePage() {
                   <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto">
                     {filteredProducts.map((product) => (
                       <button
-                        key={`${product.productName}-${product.unitPrice}`}
+                        key={`${product.productName}-${product.unitPrice}-${product.unitPurchasePrice}`}
                         type="button"
                         className="w-full px-4 py-2 text-right hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                         onClick={() => handleSelectProduct(product)}
@@ -502,8 +517,15 @@ export default function AddSalePage() {
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {selectedItems.map((item) => (
-                        <tr key={`${item.productName}-${item.unitPrice}`}>
-                          <td className="px-4 py-2 text-right">{item.productName}</td>
+                        <tr key={`${item.productName}-${item.unitPrice}-${item.unitPurchasePrice}`}>
+                          <td className="px-4 py-2 text-right">
+                            {item.productName}
+                            {item.unitPurchasePrice && (
+                              <p className="text-xs text-slate-500">
+                                سعر الشراء: {item.unitPurchasePrice.toFixed(2)} ج.م
+                              </p>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-center">
                             <Input
                               type="number"
@@ -514,6 +536,7 @@ export default function AddSalePage() {
                                 handleItemPriceChange(
                                   item.productName,
                                   item.unitPrice,
+                                  item.unitPurchasePrice,
                                   Number(e.target.value)
                                 )
                               }
@@ -530,6 +553,7 @@ export default function AddSalePage() {
                                 handleItemQuantityChange(
                                   item.productName,
                                   item.unitPrice,
+                                  item.unitPurchasePrice,
                                   Number(e.target.value)
                                 )
                               }
@@ -547,7 +571,7 @@ export default function AddSalePage() {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleRemoveItem(item.productName, item.unitPrice)}
+                              onClick={() => handleRemoveItem(item.productName, item.unitPrice, item.unitPurchasePrice)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <svg

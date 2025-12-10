@@ -7,6 +7,7 @@ export interface InvoiceItem {
   productName: string;
   quantity: number;
   unitPrice: number; // سعر بيع الوحدة من المشتريات
+  unitPurchasePrice?: number; // سعر شراء الوحدة (للتفريق بين نفس المنتج بأسعار شراء مختلفة)
   totalPrice: number; // quantity × unitPrice
   availableQuantity: number; // للتحقق من الكمية المتاحة
 }

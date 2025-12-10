@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
 import { useSuppliersStore } from "@/features/suppliers/store/suppliers-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { SupplierStatement } from "@/features/suppliers/types";
 import { useReactToPrint } from "react-to-print";
 import { InvoiceHeader } from "@/components/common/InvoiceHeader";
@@ -18,6 +19,7 @@ export default function SupplierStatementPage() {
   const searchParams = useSearchParams();
   const statementRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { purchases, fetchPurchases } = usePurchasesStore();
   const {
     suppliers,
@@ -30,12 +32,12 @@ export default function SupplierStatementPage() {
   const supplierName = searchParams.get("name") || "";
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchPurchases(user.uid);
       fetchSuppliers(user.uid);
       fetchAllPayments(user.uid);
     }
-  }, [user, fetchPurchases, fetchSuppliers, fetchAllPayments]);
+  }, [user, currentTenant, fetchPurchases, fetchSuppliers, fetchAllPayments]);
 
   // Find the supplier
   const supplier = useMemo(() => {

@@ -30,6 +30,7 @@ import {
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
 import { useProductsStore } from "@/features/products/store/products-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { useReactToPrint } from "react-to-print";
 import { InvoiceFooter } from "@/components/common/InvoiceFooter";
 import { MoreVertical, Trash2 } from "lucide-react";
@@ -44,6 +45,7 @@ interface DisplayProduct {
 export default function ProductsPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { purchases, fetchPurchases } = usePurchasesStore();
   const { products: manualProducts, fetchProducts, createProduct, deleteProduct, hideProduct, hiddenProducts, fetchHiddenProducts, isLoading } = useProductsStore();
 
@@ -58,12 +60,12 @@ export default function ProductsPage() {
   const [productToDelete, setProductToDelete] = useState<DisplayProduct | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchPurchases(user.uid);
       fetchProducts(user.uid);
       fetchHiddenProducts(user.uid);
     }
-  }, [user, fetchPurchases, fetchProducts, fetchHiddenProducts]);
+  }, [user, currentTenant, fetchPurchases, fetchProducts, fetchHiddenProducts]);
 
   // Combine products from purchases and manual products (excluding hidden ones)
   const allProducts = useMemo<DisplayProduct[]>(() => {

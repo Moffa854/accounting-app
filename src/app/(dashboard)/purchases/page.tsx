@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { PurchasesTable } from "@/features/purchases/components/purchases-table";
 import { useSettingsStore } from "@/features/settings/store/settings-store";
 
 export default function PurchasesPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { purchases, isLoading, fetchPurchases, error } = usePurchasesStore();
   const {
     fetchSettings,
@@ -20,7 +22,7 @@ export default function PurchasesPage() {
   } = useSettingsStore();
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchPurchases(user.uid);
 
       // Fetch settings and auto-update rates if needed
@@ -32,7 +34,7 @@ export default function PurchasesPage() {
         }
       });
     }
-  }, [user, fetchPurchases, fetchSettings, updateExchangeRatesFromApi, shouldUpdateRates]);
+  }, [user, currentTenant, fetchPurchases, fetchSettings, updateExchangeRatesFromApi, shouldUpdateRates]);
 
   const exchangeRates = getExchangeRates();
 

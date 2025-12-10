@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
 import { useSuppliersStore } from "@/features/suppliers/store/suppliers-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 
 export default function SupplierPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { purchases, fetchPurchases } = usePurchasesStore();
   const { suppliers, fetchSuppliers, recordPayment, createSupplier } = useSuppliersStore();
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -20,11 +22,11 @@ export default function SupplierPaymentPage() {
   const supplierName = searchParams.get("name") || "";
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchPurchases(user.uid);
       fetchSuppliers(user.uid);
     }
-  }, [user, fetchPurchases, fetchSuppliers]);
+  }, [user, currentTenant, fetchPurchases, fetchSuppliers]);
 
   // Find the supplier or get data from purchases
   const supplier = useMemo(() => {

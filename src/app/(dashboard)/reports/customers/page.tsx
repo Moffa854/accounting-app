@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,17 +28,18 @@ type SearchType = "all" | "name" | "phone" | "count" | "sales" | "balance";
 export default function CustomersReportPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { sales, customers, isLoading, fetchSales, fetchCustomers, deleteCustomer } = useSalesStore();
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<SearchType>("all");
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchSales(user.uid);
       fetchCustomers(user.uid);
     }
-  }, [user, fetchSales, fetchCustomers]);
+  }, [user, currentTenant, fetchSales, fetchCustomers]);
 
   // Get customer reports with balance from customers collection
   const customerReports = useMemo<CustomerReport[]>(() => {

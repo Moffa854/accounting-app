@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,7 @@ interface GroupedProduct {
 export default function InventoryPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { purchases, isLoading, fetchPurchases, updateSellingPriceByProductName } =
     usePurchasesStore();
   const { sales, fetchSales } = useSalesStore();
@@ -46,11 +48,11 @@ export default function InventoryPage() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchPurchases(user.uid);
       fetchSales(user.uid);
     }
-  }, [user, fetchPurchases, fetchSales]);
+  }, [user, currentTenant, fetchPurchases, fetchSales]);
 
   // Group purchases by product name and subtract sold quantities
   const groupedProducts = useMemo(() => {

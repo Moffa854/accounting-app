@@ -6,21 +6,23 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
 import { usePurchasesStore } from "@/features/purchases/store/purchases-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { SalesTable } from "@/features/sales/components/sales-table";
 
 export default function SalesPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { sales, isLoading, fetchSales, fetchCustomers } = useSalesStore();
   const { purchases, fetchPurchases } = usePurchasesStore();
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchSales(user.uid);
       fetchCustomers(user.uid);
       fetchPurchases(user.uid);
     }
-  }, [user, fetchSales, fetchCustomers, fetchPurchases]);
+  }, [user, currentTenant, fetchSales, fetchCustomers, fetchPurchases]);
 
   // Filter out payment invoices - only show actual sales
   const actualSales = sales.filter((sale) => sale.invoiceType !== "payment");

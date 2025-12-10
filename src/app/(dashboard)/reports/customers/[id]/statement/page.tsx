@@ -7,6 +7,7 @@ import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { useReactToPrint } from "react-to-print";
 import { InvoiceHeader } from "@/components/common/InvoiceHeader";
 import { InvoiceFooter } from "@/components/common/InvoiceFooter";
@@ -16,17 +17,18 @@ export default function CustomerStatementPage() {
   const params = useParams();
   const statementRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { sales, customers, fetchSales, fetchCustomers, receipts, fetchCustomerReceipts } = useSalesStore();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const customerId = params.id as string;
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchSales(user.uid);
       fetchCustomers(user.uid);
     }
-  }, [user, fetchSales, fetchCustomers]);
+  }, [user, currentTenant, fetchSales, fetchCustomers]);
 
   useEffect(() => {
     if (customerId) {

@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { useSalesStore } from "@/features/sales/store/sales-store";
+import { useTenantsStore } from "@/features/tenants/store/tenants-store";
 import { INVOICE_TYPE_LABELS } from "@/features/sales/types";
 
 export default function CustomerAccountPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuthStore();
+  const { currentTenant } = useTenantsStore();
   const { sales, customers, isLoading, fetchSales, fetchCustomers, addPaymentToCustomer } =
     useSalesStore();
 
@@ -27,11 +29,11 @@ export default function CustomerAccountPage() {
   const { receipts, fetchCustomerReceipts } = useSalesStore();
 
   useEffect(() => {
-    if (user) {
+    if (user && currentTenant) {
       fetchSales(user.uid);
       fetchCustomers(user.uid);
     }
-  }, [user, fetchSales, fetchCustomers]);
+  }, [user, currentTenant, fetchSales, fetchCustomers]);
 
   useEffect(() => {
     if (customerId) {
