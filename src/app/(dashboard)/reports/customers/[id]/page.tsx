@@ -501,19 +501,22 @@ export default function CustomerAccountPage() {
               {/* Totals Row */}
               <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                 <tr>
-                  <td
-                    colSpan={3}
-                    className="px-3 md:px-6 py-3 md:py-4 text-right text-sm font-bold text-slate-900"
-                  >
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-slate-900 hidden sm:table-cell">
+
+                  </td>
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-slate-900 hidden lg:table-cell">
+
+                  </td>
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-right text-sm font-bold text-slate-900">
                     الإجمالي
                   </td>
-                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-red-600">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-red-600 whitespace-nowrap">
                     {totals.totalDebit.toFixed(2)} ج.م
                   </td>
-                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-green-600">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold text-green-600 whitespace-nowrap">
                     {totals.totalCredit.toFixed(2)} ج.م
                   </td>
-                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold">
+                  <td className="px-3 md:px-6 py-3 md:py-4 text-center text-sm font-bold whitespace-nowrap">
                     <span
                       className={
                         customer.totalBalance > 0

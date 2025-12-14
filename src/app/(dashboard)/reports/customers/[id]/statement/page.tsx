@@ -441,108 +441,66 @@ export default function CustomerStatementPage() {
                 كشف الحساب
               </h2>
             </div>
-            <div className="rounded-xl overflow-hidden border-2 border-slate-200 shadow-lg">
-              <table className="w-full border-collapse">
+            <div className="rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden">
+              <table className="w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-blue-600 to-blue-500 text-white">
-                    <th className="px-4 py-4 text-center text-sm font-bold tracking-wide">
-                      التاريخ
-                    </th>
-                    <th className="px-4 py-4 text-right text-sm font-bold tracking-wide">
-                      البيان
-                    </th>
-                    <th className="px-4 py-4 text-center text-sm font-bold tracking-wide">
-                      مدين
-                    </th>
-                    <th className="px-4 py-4 text-center text-sm font-bold tracking-wide">
-                      دائن
-                    </th>
-                    <th className="px-4 py-4 text-center text-sm font-bold tracking-wide">
-                      الرصيد
-                    </th>
+                  <tr className="bg-blue-600 text-white">
+                    <th className="w-[15%] px-2 py-3 text-center text-sm font-bold">التاريخ</th>
+                    <th className="px-2 py-3 text-right text-sm font-bold">البيان</th>
+                    <th className="w-[16%] px-2 py-3 text-center text-sm font-bold">مدين</th>
+                    <th className="w-[16%] px-2 py-3 text-center text-sm font-bold">دائن</th>
+                    <th className="w-[16%] px-2 py-3 text-center text-sm font-bold">الرصيد</th>
                   </tr>
                 </thead>
                 <tbody>
                   {accountStatement.map((transaction, index) => (
                     <tr
                       key={transaction.id}
-                      className={`border-b border-slate-200 transition-colors ${
-                        index % 2 === 0 ? "bg-white hover:bg-blue-50" : "bg-slate-50 hover:bg-blue-50"
+                      className={`border-b border-slate-200 ${
+                        index % 2 === 0 ? "bg-white" : "bg-slate-50"
                       }`}
                     >
-                      <td className="px-4 py-3 text-center text-xs text-slate-600">
+                      <td className="w-[15%] px-2 py-3 text-center text-xs text-slate-600 whitespace-nowrap">
                         {format(transaction.date, "dd/MM/yyyy", { locale: ar })}
                       </td>
-                      <td className="px-4 py-3 text-right text-xs text-slate-900">
+                      <td className="px-2 py-3 text-right text-xs text-slate-900">
                         {transaction.description}
                       </td>
-                      <td className="px-4 py-3 text-center text-xs font-bold">
+                      <td className="w-[16%] px-2 py-3 text-center text-xs font-bold whitespace-nowrap">
                         {transaction.debit > 0 ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg bg-red-100 text-red-700">
-                            {transaction.debit.toFixed(2)} ج.م
-                          </span>
+                          <span className="text-red-600">{transaction.debit.toFixed(2)} ج.م</span>
                         ) : (
-                          <span className="text-slate-300 text-lg">-</span>
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center text-xs font-bold">
+                      <td className="w-[16%] px-2 py-3 text-center text-xs font-bold whitespace-nowrap">
                         {transaction.credit > 0 ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg bg-green-100 text-green-700">
-                            {transaction.credit.toFixed(2)} ج.م
-                          </span>
+                          <span className="text-green-600">{transaction.credit.toFixed(2)} ج.م</span>
                         ) : (
-                          <span className="text-slate-300 text-lg">-</span>
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center text-xs font-extrabold">
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-lg ${
-                            transaction.balance > 0
-                              ? "bg-red-100 text-red-700"
-                              : transaction.balance < 0
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
-                          }`}
-                        >
+                      <td className="w-[16%] px-2 py-3 text-center text-xs font-extrabold whitespace-nowrap">
+                        <span className={
+                          transaction.balance > 0
+                            ? "text-red-600"
+                            : transaction.balance < 0
+                            ? "text-blue-600"
+                            : "text-green-600"
+                        }>
                           {transaction.balance.toFixed(2)} ج.م
                         </span>
                       </td>
                     </tr>
                   ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gradient-to-r from-slate-700 to-slate-600 text-white font-bold">
-                    <td
-                      colSpan={2}
-                      className="px-4 py-3 text-right text-xs"
-                    >
-                      الإجمالي النهائي
-                    </td>
-                    <td className="px-4 py-3 text-center text-xs">
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-red-200 text-red-900">
-                        {totals.totalDebit.toFixed(2)} ج.م
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-xs">
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-green-200 text-green-900">
-                        {totals.totalCredit.toFixed(2)} ج.م
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm font-extrabold">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-lg ${
-                          customer.totalBalance > 0
-                            ? "bg-red-200 text-red-900"
-                            : customer.totalBalance < 0
-                            ? "bg-blue-200 text-blue-900"
-                            : "bg-green-200 text-green-900"
-                        }`}
-                      >
-                        {customer.totalBalance.toFixed(2)} ج.م
-                      </span>
-                    </td>
+                  <tr className="bg-slate-700 text-white font-bold">
+                    <td className="w-[15%] px-2 py-3 text-center text-xs whitespace-nowrap">الإجمالي</td>
+                    <td className="px-2 py-3 text-right text-xs"></td>
+                    <td className="w-[16%] px-2 py-3 text-center text-xs whitespace-nowrap">{totals.totalDebit.toFixed(2)} ج.م</td>
+                    <td className="w-[16%] px-2 py-3 text-center text-xs whitespace-nowrap">{totals.totalCredit.toFixed(2)} ج.م</td>
+                    <td className="w-[16%] px-2 py-3 text-center text-xs whitespace-nowrap">{customer.totalBalance.toFixed(2)} ج.م</td>
                   </tr>
-                </tfoot>
+                </tbody>
               </table>
             </div>
           </div>
